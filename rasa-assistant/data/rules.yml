@@ -1,0 +1,103 @@
+version: "3.1"
+
+rules:
+
+- rule: Play music
+  steps:
+    - intent: play_music
+    - action: action_play_music
+
+- rule: Pause music
+  steps:
+    - intent: pause_music
+    - action: action_pause_music
+
+- rule: Resume music
+  steps:
+    - intent: resume_music
+    - action: action_resume_music
+
+- rule: Stop music
+  steps:
+    - intent: stop_music
+    - action: action_stop_music
+
+- rule: Next song
+  steps:
+    - intent: next_song
+    - action: action_next_song
+
+- rule: Previous song
+  steps:
+    - intent: previous_song
+    - action: action_previous_song
+
+- rule: Increase volume
+  steps:
+    - intent: increase_volume
+    - action: action_increase_volume
+
+- rule: Decrease volume
+  steps:
+    - intent: decrease_volume
+    - action: action_decrease_volume
+
+- rule: Mute
+  steps:
+    - intent: mute
+    - action: action_mute
+
+- rule: Unmute music
+  steps:
+    - intent: unmute
+    - action: action_unmute
+
+- rule: Shuffle music
+  steps:
+    - intent: shuffle
+    - action: utter_shuffle
+
+- rule: Repeat song
+  steps:
+    - intent: repeat_song
+    - action: utter_repeat_song
+
+- rule: Search song
+  steps:
+    - intent: search_song
+    - action: utter_search_song
+
+- rule: Search artist
+  steps:
+    - intent: search_artist
+    - action: utter_search_artist
+
+- rule: Add to playlist
+  steps:
+    - intent: add_to_playlist
+    - action: utter_add_to_playlist
+
+- rule: Remove from playlist
+  steps:
+    - intent: remove_from_playlist
+    - action: utter_remove_from_playlist
+
+- rule: Like song
+  steps:
+    - intent: like_song
+    - action: utter_like_song
+
+- rule: Dislike song
+  steps:
+    - intent: dislike_song
+    - action: utter_dislike_song
+
+- rule: Open playlist
+  steps:
+    - intent: open_playlist
+    - action: utter_open_playlist
+
+- rule: Show lyrics
+  steps:
+    - intent: show_lyrics
+    - action: utter_show_lyrics

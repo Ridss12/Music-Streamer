@@ -1,0 +1,102 @@
+TRACK | ARTIST | TITLE | SONG FILE | THUMBNAIL
+----------------------------------------------------------------------------------------------------
+001 |  | @BillieEilish  - WILDFLOWER  Lyrics | 001_BillieEilish_WILDFLOWER_Lyrics.mp3 | 001.png
+002 |  | @sza - Saturn  Lyrics | 002_sza_Saturn_Lyrics.mp3 | 002.png
+003 |  | Addison Rae - Diet Pepsi  Lyrics | 003_Addison_Rae_Diet_Pepsi_Lyrics.mp3 | 003.png
+004 |  | Alex Warren - Eternity  Lyrics | 004_Alex_Warren_Eternity_Lyrics.mp3 | 004.png
+005 |  | Alex Warren - FEVER DREAM  Lyrics | 005_Alex_Warren_FEVER_DREAM_Lyrics.mp3 | 005.png
+006 |  | Alex Warren - Ordinary  Lyrics | 006_Alex_Warren_Ordinary_Lyrics.mp3 | 006.png
+007 |  | Alexia - I just might  Visualizer | 007_Alexia_I_just_might_Visualizer.mp3 | 007.png
+008 |  | Ariana Grande - twilight zone  lyric visualizer | 008_Ariana_Grande_twilight_zone_lyric_visualizer.mp3 | 008.png
+009 |  | Artemas - i like the way you kiss me  Lyrics | 009_Artemas_i_like_the_way_you_kiss_me_Lyrics.mp3 | 009.png
+010 |  | BLACKPINK  뛰어 JUMP    Color Coded Lyrics | 010_BLACKPINK_JUMP_Color_Coded_Lyrics.mp3 | 010.png
+011 |  | Bella Kay - iloveitiloveitiloveit  Lyrics | 011_Bella_Kay_iloveitiloveitiloveit_Lyrics.mp3 | 011.png
+012 |  | Billie Eilish - BIRDS OF A FEATHER  Official Lyric Video | 012_Billie_Eilish_BIRDS_OF_A_FEATHER_Official_Lyric_Video.mp3 | 012.png
+013 |  | Bruno Mars - Risk It All  Lyrics | 013_Bruno_Mars_Risk_It_All_Lyrics.mp3 | 013.png
+014 |  | Chappell Roan - Good Luck, Babe!  Lyrics | 014_Chappell_Roan_Good_Luck_Babe_Lyrics.mp3 | 014.png
+015 |  | Chappell Roan - HOT TO GO!  Lyrics | 015_Chappell_Roan_HOT_TO_GO_Lyrics.mp3 | 015.png
+016 |  | Darin feat. Eloise - Falling In love  Music Video | 016_Darin_feat_Eloise_Falling_In_love_Music_Video.mp3 | 016.png
+017 |  | Dave, Tems - Raindance  Lyrics | 017_Dave_Tems_Raindance_Lyrics.mp3 | 017.png
+018 |  | David Guetta   Sia - Beautiful People  Lyric Video | 018_David_Guetta_Sia_Beautiful_People_Lyric_Video.mp3 | 018.png
+019 |  | Djo - End Of Beginning  Lyrics | 019_Djo_End_Of_Beginning_Lyrics.mp3 | 019.png
+020 |  | Doechii - Anxiety  Lyrics | 020_Doechii_Anxiety_Lyrics.mp3 | 020.png
+021 |  | Dominic Fike - Babydoll  Lyrics (0) | 021_Dominic_Fike_Babydoll_Lyrics_0.mp3 | 021.png
+022 |  | Dominic Fike - Babydoll  Lyrics | 022_Dominic_Fike_Babydoll_Lyrics.mp3 | 022.png
+023 |  | Dominic Fike - White Keys  Lyrics | 023_Dominic_Fike_White_Keys_Lyrics.mp3 | 023.png
+024 |  | Ed Sheeran - Sapphire  Lyrics | 024_Ed_Sheeran_Sapphire_Lyrics.mp3 | 024.png
+025 |  | Ella Langley - Be Her  Lyrics | 025_Ella_Langley_Be_Her_Lyrics.mp3 | 025.png
+026 |  | Ella Langley - Choosin  Texas  Lyrics | 026_Ella_Langley_Choosin_Texas_Lyrics.mp3 | 026.png
+027 |  | Eloise - It All Goes  Visualizer | 027_Eloise_It_All_Goes_Visualizer.mp3 | 027.png
+028 |  | Felix Green - Forgot To Love You  Official Lyric Video | 028_Felix_Green_Forgot_To_Love_You_Official_Lyric_Video.mp3 | 028.png
+029 |  | Gabriel Jacoby - the one | 029_Gabriel_Jacoby_the_one.mp3 | 029.png
+030 |  | Gigi Perez – Sailor Song  Lyrics | 030_Gigi_Perez_Sailor_Song_Lyrics.mp3 | 030.png
+031 |  | Gracie Abrams - That’s So True  Lyrics | 031_Gracie_Abrams_That_s_So_True_Lyrics.mp3 | 031.png
+032 |  | HAVEN. - I RUN  Lyrics | 032_HAVEN_I_RUN_Lyrics.mp3 | 032.png
+033 |  | Harry Styles - American Girls  Official Lyric Video | 033_Harry_Styles_American_Girls_Official_Lyric_Video.mp3 | 033.png
+034 |  | Hozier - Too Sweet  Lyrics   i take my whiskey neat | 034_Hozier_Too_Sweet_Lyrics_i_take_my_whiskey_neat.mp3 | 034.png
+035 |  | Huntrix - Golden  Lyrics  KPop Demon Hunters | 035_Huntrix_Golden_Lyrics_KPop_Demon_Hunters.mp3 | 035.png
+036 |  | I Thought I Saw Your Face Today - She And Him  Lyrics | 036_I_Thought_I_Saw_Your_Face_Today_She_And_Him_Lyrics.mp3 | 036.png
+037 |  | Isaiah Falls - TABOO  Official Music Video | 037_Isaiah_Falls_TABOO_Official_Music_Video.mp3 | 037.png
+038 |  | James Arthur - Impossible  Lyrics | 038_James_Arthur_Impossible_Lyrics.mp3 | 038.png
+039 |  | James Arthur - Train Wreck  Lyrics | 039_James_Arthur_Train_Wreck_Lyrics.mp3 | 039.png
+040 |  | Justin Bieber, Nicki Minaj – Beauty And A Beat  Lyrics | 040_Justin_Bieber_Nicki_Minaj_Beauty_And_A_Beat_Lyrics.mp3 | 040.png
+041 |  | Justin Bieber - Beauty And A Beat  Lyrics  ft. Nicki Minaj | 041_Justin_Bieber_Beauty_And_A_Beat_Lyrics_ft_Nicki_Minaj.mp3 | 041.png
+042 |  | Justin Bieber - DAISIES  Lyrics | 042_Justin_Bieber_DAISIES_Lyrics.mp3 | 042.png
+043 |  | Justin Bieber - Yukon  Lyrics | 043_Justin_Bieber_Yukon_Lyrics.mp3 | 043.png
+044 |  | KATSEYE - Internet Girl  Lyrics | 044_KATSEYE_Internet_Girl_Lyrics.mp3 | 044.png
+045 |  | KATSEYE  캣츠아이   Pinky Up   Color Coded Lyrics | 045_KATSEYE_Pinky_Up_Color_Coded_Lyrics.mp3 | 045.png
+046 |  | Katy Perry - The One That Got Away  Lyrics (0) | 046_Katy_Perry_The_One_That_Got_Away_Lyrics_0.mp3 | 046.png
+047 |  | Katy Perry - The One That Got Away  Lyrics | 047_Katy_Perry_The_One_That_Got_Away_Lyrics.mp3 | 047.png
+048 |  | Kehlani - Folded  Lyrics | 048_Kehlani_Folded_Lyrics.mp3 | 048.png
+049 |  | Kendrick Lamar - luther  Lyrics  ft. SZA | 049_Kendrick_Lamar_luther_Lyrics_ft_SZA.mp3 | 049.png
+050 |  | Kids That Fly - Too Many People  Official Lyric Video | 050_Kids_That_Fly_Too_Many_People_Official_Lyric_Video.mp3 | 050.png
+051 |  | Lady Gaga, Bruno Mars - Die With A Smile  Lyrics | 051_Lady_Gaga_Bruno_Mars_Die_With_A_Smile_Lyrics.mp3 | 051.png
+052 |  | Lady Gaga - Abracadabra  Lyrics | 052_Lady_Gaga_Abracadabra_Lyrics.mp3 | 052.png
+053 |  | Lil Uzi Vert - What You Saying  Lyrics | 053_Lil_Uzi_Vert_What_You_Saying_Lyrics.mp3 | 053.png
+054 |  | Lola Young - Messy  Lyrics | 054_Lola_Young_Messy_Lyrics.mp3 | 054.png
+055 |  | Lucy Dacus - Planting Tomatoes  Official Music Video | 055_Lucy_Dacus_Planting_Tomatoes_Official_Music_Video.mp3 | 055.png
+056 |  | Malcolm Todd - Earrings  Lyrics | 056_Malcolm_Todd_Earrings_Lyrics.mp3 | 056.png
+057 |  | Man I Need - Olivia Dean  Lyrics | 057_Man_I_Need_Olivia_Dean_Lyrics.mp3 | 057.png
+058 |  | Metito - On my mind  Lyrics | 058_Metito_On_my_mind_Lyrics.mp3 | 058.png
+059 |  | Michael Jackson - Human Nature  Lyrics Video  🎤 | 059_Michael_Jackson_Human_Nature_Lyrics_Video.mp3 | 059.png
+060 |  | Miley Cyrus - Flowers  Lyrics | 060_Miley_Cyrus_Flowers_Lyrics.mp3 | 060.png
+061 |  | Morgan Wallen - What I Want  feat. Tate McRae   Lyric Video | 061_Morgan_Wallen_What_I_Want_feat_Tate_McRae_Lyric_Video.mp3 | 061.png
+062 |  | Olivia Dean - A Couple Minutes  Lyric Video | 062_Olivia_Dean_A_Couple_Minutes_Lyric_Video.mp3 | 062.png
+063 |  | Olivia Dean - So Easy  To Fall In Love   Lyrics | 063_Olivia_Dean_So_Easy_To_Fall_In_Love_Lyrics.mp3 | 063.png
+064 |  | PinkPantheress - Stateside   Zara Larsson  Lyrics | 064_PinkPantheress_Stateside_Zara_Larsson_Lyrics.mp3 | 064.png
+065 |  | Popcaan - Wine   Jiggle  Official Music Video | 065_Popcaan_Wine_Jiggle_Official_Music_Video.mp3 | 065.png
+066 |  | Post Malone   Morgan Wallen - I Had Some Help  Lyrics | 066_Post_Malone_Morgan_Wallen_I_Had_Some_Help_Lyrics.mp3 | 066.png
+067 |  | ROSÉ   Bruno Mars - APT.  Lyrics | 067_ROS_Bruno_Mars_APT_Lyrics.mp3 | 067.png
+068 |  | Ravyn Lenae - Love Me Not  Lyrics | 068_Ravyn_Lenae_Love_Me_Not_Lyrics.mp3 | 068.png
+069 |  | Rema, Selena Gomez - Calm Down  Lyrics | 069_Rema_Selena_Gomez_Calm_Down_Lyrics.mp3 | 069.png
+070 |  | Rihanna – Breakin  Dishes  Lyrics | 070_Rihanna_Breakin_Dishes_Lyrics.mp3 | 070.png
+071 |  | Sabrina Carpenter - Espresso  Lyrics | 071_Sabrina_Carpenter_Espresso_Lyrics.mp3 | 071.png
+072 |  | Sabrina Carpenter - Manchild  Lyrics | 072_Sabrina_Carpenter_Manchild_Lyrics.mp3 | 072.png
+073 |  | Sabrina Carpenter - Please Please Please  Lyrics | 073_Sabrina_Carpenter_Please_Please_Please_Lyrics.mp3 | 073.png
+074 |  | Sabrina Carpenter - Tears  Lyrics | 074_Sabrina_Carpenter_Tears_Lyrics.mp3 | 074.png
+075 |  | Saja Boys - Your Idol  Lyrics  KPop Demon Hunters | 075_Saja_Boys_Your_Idol_Lyrics_KPop_Demon_Hunters.mp3 | 075.png
+076 |  | Sienna Spiro - Die On This Hill  Lyrics | 076_Sienna_Spiro_Die_On_This_Hill_Lyrics.mp3 | 076.png
+077 |  | Sierra - You Broke Me  Music Video | 077_Sierra_You_Broke_Me_Music_Video.mp3 | 077.png
+078 |  | Stephen Sanchez - Until I Found You  Lyrics | 078_Stephen_Sanchez_Until_I_Found_You_Lyrics.mp3 | 078.png
+079 |  | Surf Trash - Mr Speers  Official Visualiser | 079_Surf_Trash_Mr_Speers_Official_Visualiser.mp3 | 079.png
+080 |  | Tame Impala - Dracula  Lyrics | 080_Tame_Impala_Dracula_Lyrics.mp3 | 080.png
+081 |  | Tate McRae - TIT FOR TAT  Lyric Video | 081_Tate_McRae_TIT_FOR_TAT_Lyric_Video.mp3 | 081.png
+082 |  | Taylor Swift - Cruel Summer | 082_Taylor_Swift_Cruel_Summer.mp3 | 082.png
+083 |  | Taylor Swift - Opalite  Lyrics | 083_Taylor_Swift_Opalite_Lyrics.mp3 | 083.png
+084 |  | Taylor Swift - The Fate of Ophelia | 084_Taylor_Swift_The_Fate_of_Ophelia.mp3 | 084.png
+085 |  | Teddy Swims - Bad Dreams  Lyrics | 085_Teddy_Swims_Bad_Dreams_Lyrics.mp3 | 085.png
+086 |  | Temper City - Self Aware | 086_Temper_City_Self_Aware.mp3 | 086.png
+087 |  | The 046 - DOWNTOWN DREAMIN   Prod. Sefru  [MUSIC VIDEO] | 087_The_046_DOWNTOWN_DREAMIN_Prod_Sefru_MUSIC_VIDEO.mp3 | 087.png
+088 |  | The Weeknd, Ariana Grande - Die For You  Remix   Lyric Video | 088_The_Weeknd_Ariana_Grande_Die_For_You_Remix_Lyric_Video.mp3 | 088.png
+089 |  | Tom Odell - Another Love  Lyrics | 089_Tom_Odell_Another_Love_Lyrics.mp3 | 089.png
+090 |  | Tyla - CHANEL  Lyrics | 090_Tyla_CHANEL_Lyrics.mp3 | 090.png
+091 |  | WizTheMc, bees   honey - Show Me Love  Lyrics | 091_WizTheMc_bees_honey_Show_Me_Love_Lyrics.mp3 | 091.png
+092 |  | ZEP - NOBODY  Official Music Video | 092_ZEP_NOBODY_Official_Music_Video.mp3 | 092.png
+093 |  | Zara Larsson - Lush Life  Lyrics | 093_Zara_Larsson_Lush_Life_Lyrics.mp3 | 093.png
+094 |  | Zara Larsson - Midnight Sun | 094_Zara_Larsson_Midnight_Sun.mp3 | 094.png
+095 |  | NSYNC - Bye Bye Bye  Lyrics   Deadpool 3 Soundtrack | 095_NSYNC_Bye_Bye_Bye_Lyrics_Deadpool_3_Soundtrack.mp3 | 095.png
+096 |  | That s The Way I Like It   KC   THE SUNSHINE BAND  Cover by The HSCC | 096_That_s_The_Way_I_Like_It_KC_THE_SUNSHINE_BAND_Cover_by_The_HSCC.mp3 | 096.png
+097 |  | cassö, RAYE, D-Block Europe - Prada  Lyrics | 097_cass_RAYE_D_Block_Europe_Prada_Lyrics.mp3 | 097.png
+098 |  | sombr - back to friends  lyrics | 098_sombr_back_to_friends_lyrics.mp3 | 098.png
+099 |  | sombr - undressed  official lyric video | 099_sombr_undressed_official_lyric_video.mp3 | 099.png
+100 |  | yung kai - blue  Lyrics | 100_yung_kai_blue_Lyrics.mp3 | 100.png

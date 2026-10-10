@@ -1,0 +1,33 @@
+# Python virtual environments
+**/venv/
+**/.venv/
+**/venv-linux/
+**/venv-windows/
+**/venv-*/
+
+# Python cache
+**/__pycache__/
+*.py[cod]
+
+# Node.js
+**/node_modules/
+**/dist/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Local database
+/backend/music_streamer.db
+
+# Logs
+*.log
+
+# Rasa cache and trained models
+**/.rasa/
+**/models/
+
+# OS files
+.DS_Store
+Thumbs.db

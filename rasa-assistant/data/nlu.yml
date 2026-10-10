@@ -1,0 +1,251 @@
+version: "3.1"
+
+nlu:
+
+- intent: play_music
+  examples: |
+    - play happy birthday song
+    - please play happy birthday
+    - play [Believer](song)
+    - play [Shape of You](song)
+    - play [Kesariya](song)
+    - play [Arijit Singh](artist)
+    - play an [Arijit Singh](artist) song
+    - [Arijit Singh](artist) ka song play karo
+    - [Arijit](artist) ka gana chalao
+    - mujhe [Kesariya](song) sunao
+    - [Kesariya](song) baja do
+    - gana chalao
+    - song play karo
+    - music chalao
+    - please play a song
+    - can you play some music
+    - मुझे हैप्पी बर्थडे गाना चलाओ
+    - गाना बजाओ
+    - म्यूजिक चलाओ
+    - [Arijit Singh](artist) चे गाणे लावा
+    - गाणं चालू करा
+
+- intent: pause_music
+  examples: |
+    - pause the song
+    - pause music
+    - please pause
+    - pause
+    - song pause karo
+    - music pause karo
+    - gana rok do
+    - गाना रोक दो
+    - संगीत थांबवा
+    - गाणं pause करा
+
+- intent: resume_music
+  examples: |
+    - resume the song
+    - resume music
+    - continue playing
+    - continue the song
+    - play again
+    - song resume karo
+    - gana fir se chalao
+    - गाना फिर से शुरू करो
+    - गाणं पुन्हा सुरू करा
+
+- intent: stop_music
+  examples: |
+    - stop the song
+    - stop music
+    - stop
+    - completely stop the music
+    - song band karo
+    - gana band karo
+    - music bandh karo
+    - गाना बंद करो
+    - संगीत बंद करा
+
+- intent: next_song
+  examples: |
+    - play next song
+    - next song
+    - next
+    - skip this song
+    - play the next track
+    - agla gana chalao
+    - next gana
+    - agla song play karo
+    - अगला गाना चलाओ
+    - पुढचं गाणं लावा
+
+- intent: previous_song
+  examples: |
+    - play previous song
+    - previous song
+    - previous
+    - go back to previous song
+    - last song
+    - pichla gana chalao
+    - pichla song play karo
+    - पिछला गाना चलाओ
+    - मागचं गाणं लावा
+
+- intent: increase_volume
+  examples: |
+    - increase volume
+    - turn up the volume
+    - volume up
+    - make it louder
+    - volume badhao
+    - awaaz badhao
+    - volume thoda zyada karo
+    - आवाज बढ़ाओ
+    - आवाज वाढवा
+
+- intent: decrease_volume
+  examples: |
+    - decrease volume
+    - turn down the volume
+    - volume down
+    - make it quieter
+    - volume kam karo
+    - awaaz kam karo
+    - thoda volume kam karo
+    - आवाज कम करो
+    - आवाज कमी करा
+
+- intent: mute
+  examples: |
+    - mute
+    - mute the music
+    - mute the song
+    - sound off
+    - music mute karo
+    - awaaz band karo
+    - आवाज बंद करा
+
+- intent: unmute
+  examples: |
+    - unmute
+    - unmute the music
+    - turn sound on
+    - restore the sound
+    - music unmute karo
+    - awaaz chalu karo
+    - आवाज चालू करा
+
+- intent: shuffle
+  examples: |
+    - shuffle
+    - shuffle my songs
+    - shuffle the playlist
+    - play songs randomly
+    - random songs play karo
+    - playlist shuffle karo
+    - गाणी shuffle करा
+    - गाणे random वाजवा
+
+- intent: repeat_song
+  examples: |
+    - repeat the song
+    - repeat this song
+    - replay the song
+    - play this song again
+    - song repeat karo
+    - gana repeat karo
+    - हे गाणं पुन्हा वाजवा
+    - गाना फिर से चलाओ
+
+- intent: search_song
+  examples: |
+    - search for [Believer](song)
+    - find [Shape of You](song)
+    - search [Kesariya](song)
+    - find the song [Perfect](song)
+    - look for [Happy Birthday](song)
+    - [Kesariya](song) search karo
+    - [Believer](song) dhundo
+    - mujhe [Perfect](song) chahiye
+    - गाना खोजो
+    - [Kesariya](song) शोधा
+
+- intent: search_artist
+  examples: |
+    - search for [Arijit Singh](artist)
+    - find songs by [Arijit Singh](artist)
+    - show [Taylor Swift](artist)
+    - search [The Weeknd](artist)
+    - [Arijit Singh](artist) ko search karo
+    - [Taylor Swift](artist) ke songs dikhao
+    - mujhe [Arijit Singh](artist) ke songs chahiye
+    - कलाकार खोजो
+    - [Arijit Singh](artist) शोधा
+
+- intent: add_to_playlist
+  examples: |
+    - add this song to my playlist
+    - add this to playlist
+    - add [Believer](song) to my playlist
+    - save this song to [Workout](playlist)
+    - add it to my playlist
+    - isko playlist mein add karo
+    - ye gana playlist mein daal do
+    - [Believer](song) ko [Workout](playlist) mein add karo
+    - हे गाणं playlist मध्ये add करा
+
+- intent: remove_from_playlist
+  examples: |
+    - remove this song from my playlist
+    - remove [Believer](song)
+    - delete this song from playlist
+    - remove it from playlist
+    - isko playlist se hatao
+    - ye gana playlist se delete karo
+    - [Believer](song) ko playlist se hatao
+    - हे गाणं playlist मधून काढा
+
+- intent: like_song
+  examples: |
+    - like this song
+    - I like this song
+    - add this song to favorites
+    - favorite this song
+    - like it
+    - isko like karo
+    - ye gana favorite karo
+    - हे गाणं आवडतं
+    - गाणं favorites मध्ये add करा
+
+- intent: dislike_song
+  examples: |
+    - dislike this song
+    - I don't like this song
+    - remove from favorites
+    - unlike this song
+    - don't play this song again
+    - isko dislike karo
+    - ye gana pasand nahi hai
+    - हे गाणं आवडत नाही
+
+- intent: open_playlist
+  examples: |
+    - open my playlist
+    - open [Workout](playlist) playlist
+    - show my playlist
+    - open [Favorites](playlist)
+    - play my [Chill](playlist) playlist
+    - meri playlist kholo
+    - [Workout](playlist) playlist kholo
+    - meri favorite playlist dikhao
+    - playlist उघडा
+    - [Workout](playlist) playlist उघडा
+
+- intent: show_lyrics
+  examples: |
+    - show lyrics
+    - show me the lyrics
+    - display song lyrics
+    - lyrics please
+    - lyrics dikhao
+    - iske lyrics dikhao
+    - gane ke lyrics dikhao
+    - गाने के lyrics दिखाओ
+    - गाण्याचे lyrics दाखवा

@@ -1,0 +1,20 @@
+recipe: default.v1
+
+assistant_id: music_voice_assistant
+
+language: en
+
+pipeline:
+  - name: WhitespaceTokenizer
+  - name: RegexFeaturizer
+  - name: LexicalSyntacticFeaturizer
+  - name: CountVectorsFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 3
+    max_ngram: 17
+  - name: DIETClassifier
+    epochs: 100
+
+policies:
+  - name: RulePolicy

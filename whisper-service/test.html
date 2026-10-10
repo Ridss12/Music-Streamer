@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Whisper Voice Test</title>
+</head>
+<body>
+    <h1>🎤 Whisper Voice Test</h1>
+
+    <button id="start">Start Recording</button>
+    <button id="stop" disabled>Stop Recording</button>
+
+    <p id="status">Ready</p>
+    <h3>Transcription:</h3>
+    <p id="result"></p>
+
+    <script>
+        let recorder;
+        let chunks = [];
+
+        const start = document.getElementById("start");
+        const stop = document.getElementById("stop");
+        const status = document.getElementById("status");
+        const result = document.getElementById("result");
+
+        start.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true
+            });
+
+            chunks = [];
+            recorder = new MediaRecorder(stream);
+
+            recorder.ondataavailable = e => {
+                if (e.data.size > 0) {
+                    chunks.push(e.data);
+                }
+            };
+
+            recorder.onstop = async () => {
+                status.textContent = "Sending to Whisper...";
+
+                const blob = new Blob(chunks, {
+                    type: "audio/webm"
+                });
+
+                const formData = new FormData();
+                formData.append("file", blob, "voice.webm");
+
+                const response = await fetch(
+                    "http://127.0.0.1:8001/transcribe",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+                const data = await response.json();
+
+                result.textContent = data.text || "(No speech detected)";
+                status.textContent =
+                    "Detected language: " + (data.language || "unknown");
+
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            recorder.start();
+
+            start.disabled = true;
+            stop.disabled = false;
+            status.textContent = "🎤 Recording...";
+        };
+
+        stop.onclick = () => {
+            recorder.stop();
+
+            start.disabled = false;
+            stop.disabled = true;
+        };
+    </script>
+</body>
+</html>

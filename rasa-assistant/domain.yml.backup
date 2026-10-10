@@ -1,0 +1,127 @@
+version: "3.1"
+
+intents:
+  - play_music
+  - pause_music
+  - resume_music
+  - stop_music
+  - next_song
+  - previous_song
+  - increase_volume
+  - decrease_volume
+  - mute
+  - unmute
+  - shuffle
+  - repeat_song
+  - search_song
+  - search_artist
+  - add_to_playlist
+  - remove_from_playlist
+  - like_song
+  - dislike_song
+  - open_playlist
+  - show_lyrics
+
+entities:
+  - song
+  - artist
+  - playlist
+  - genre
+
+slots:
+  song:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: song
+
+  artist:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: artist
+
+  playlist:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: playlist
+
+  genre:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: genre
+
+responses:
+
+  utter_play_music:
+    - text: "Playing your song."
+
+  utter_pause_music:
+    - text: "Music paused."
+
+  utter_resume_music:
+    - text: "Resuming music."
+
+  utter_stop_music:
+    - text: "Music stopped."
+
+  utter_next_song:
+    - text: "Playing the next song."
+
+  utter_previous_song:
+    - text: "Playing the previous song."
+
+  utter_increase_volume:
+    - text: "Increasing volume."
+
+  utter_decrease_volume:
+    - text: "Decreasing volume."
+
+  utter_mute:
+    - text: "Music muted."
+
+  utter_unmute:
+    - text: "Music unmuted."
+
+  utter_shuffle:
+    - text: "Shuffling your music."
+
+  utter_repeat_song:
+    - text: "Repeating the song."
+
+  utter_search_song:
+    - text: "Searching for the song."
+
+  utter_search_artist:
+    - text: "Searching for the artist."
+
+  utter_add_to_playlist:
+    - text: "Adding the song to your playlist."
+
+  utter_remove_from_playlist:
+    - text: "Removing the song from your playlist."
+
+  utter_like_song:
+    - text: "Song added to your favorites."
+
+  utter_dislike_song:
+    - text: "Song removed from your favorites."
+
+  utter_open_playlist:
+    - text: "Opening your playlist."
+
+  utter_show_lyrics:
+    - text: "Showing the lyrics."
+
+  utter_default:
+    - text: "Sorry, I didn't understand that music command."
+
+actions:
+  - action_play_music
+  - action_pause_music
+  - action_resume_music
+  - action_stop_music
+  - action_next_song
+  - action_previous_song
