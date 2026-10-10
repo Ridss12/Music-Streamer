@@ -38,7 +38,15 @@ async def transcribe(file: UploadFile = File(...)):
         audio_path = temp.name
 
     try:
-        result = model.transcribe(audio_path)
+        result = model.transcribe(
+            audio_path,
+            language="en",
+            temperature=0.0,
+            initial_prompt=(
+                "Music player voice commands: play a song, pause music, "
+                "resume music, stop music, next song, previous song."
+            ),
+        )
 
         return {
             "text": result["text"].strip(),
