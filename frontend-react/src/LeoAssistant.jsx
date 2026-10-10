@@ -47,11 +47,14 @@ export default function LeoAssistant() {
 
       console.log('Leo heard:', text)
 
-      const wakeWord = text.match(/\bhey\s*,?\s*(?:leo|leah|neo)\b/i)
-      if (!wakeWord) return
+      // Whisper sometimes transcribes “Hey Leo” as “Heyho” or “Hey yo”.
+      // Leo is already explicitly enabled by the user, so also accept a
+      // direct supported command when the wake phrase is missed entirely.
+      const wakeWord = text.match(/\b(?:hey\s*,?\s*(?:leo|leah|neo|yo)|heyho|hello\s*,?\s*leo)\b/i)
 
-      let command = text
-        .slice(wakeWord.index + wakeWord[0].length)
+      let command = (wakeWord
+        ? text.slice(wakeWord.index + wakeWord[0].length)
+        : text)
         .replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, '')
         .trim()
 
