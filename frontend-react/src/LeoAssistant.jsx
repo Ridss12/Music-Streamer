@@ -47,29 +47,17 @@ export default function LeoAssistant() {
 
       console.log('Leo heard:', text)
 
-      const lowerText = text.toLowerCase()
-
-      const wakeWords = [
-        'hey leo',
-        'hey, leo',
-        'hey leah',
-        'hey, leah',
-        'hey neo',
-        'hey, neo'
-      ]
-
-      const wakeWord = wakeWords.find(word =>
-        lowerText.includes(word)
-      )
-
+      const wakeWord = text.match(/\bhey\s*,?\s*(?:leo|leah|neo)\b/i)
       if (!wakeWord) return
 
       let command = text
-        .replace(new RegExp(wakeWord, 'i'), '')
+        .slice(wakeWord.index + wakeWord[0].length)
+        .replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, '')
         .trim()
 
       command = command
         .replace(/^(yeah|yes|okay|ok)[,\s]*/i, '')
+        .replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, '')
         .trim()
 
       if (!command) {
@@ -79,31 +67,7 @@ export default function LeoAssistant() {
 
       console.log('Leo command:', command)
 
-      // Rasa provides conversational feedback, but player controls must work
-      // even when the optional Rasa server is unavailable.
-      try {
-        const rasaResponse = await fetch(
-          'http://127.0.0.1:5005/webhooks/rest/webhook',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sender: 'leo-user', message: command })
-          }
-        )
-
-        if (rasaResponse.ok) {
-          const rasaData = await rasaResponse.json()
-          const responseText = rasaData
-            .map(item => item.text || '')
-            .filter(Boolean)
-            .join(' ')
-          if (responseText) speak(responseText)
-        }
-      } catch (error) {
-        console.warn('Leo conversational service unavailable:', error)
-      }
-
-      const lowerCommand = command.toLowerCase()
+      const lowerCommand = command.toLowerCase().replace(/[.!?,;:]+$/g, '').trim()
 
       if (/^(play|put on|start)\s+/i.test(command)) {
         window.dispatchEvent(
@@ -170,6 +134,32 @@ export default function LeoAssistant() {
       } else if (/^(repeat|repeat song|repeat this song)$/.test(lowerCommand)) {
         window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'repeat' } }))
       }
+
+      // Start the player action immediately. Rasa is only used for a spoken
+      // reply, so an unavailable or slow Rasa server must not block playback.
+      void (async () => {
+        try {
+          const rasaResponse = await fetch(
+            'http://127.0.0.1:5005/webhooks/rest/webhook',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sender: 'leo-user', message: command })
+            }
+          )
+
+          if (rasaResponse.ok) {
+            const rasaData = await rasaResponse.json()
+            const responseText = rasaData
+              .map(item => item.text || '')
+              .filter(Boolean)
+              .join(' ')
+            if (responseText) speak(responseText)
+          }
+        } catch (error) {
+          console.warn('Leo conversational service unavailable:', error)
+        }
+      })()
     } catch (error) {
       console.error('Leo error:', error)
     } finally {
@@ -253,7 +243,7 @@ export default function LeoAssistant() {
           if (recorder.state === 'recording') {
             recorder.stop()
           }
-        }, 2000)
+        }, 4000)
       }
 
       console.log('Leo microphone started')
