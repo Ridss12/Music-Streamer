@@ -27,6 +27,11 @@
 # Rasa cache and trained models
 **/.rasa/
 **/models/
+# Keep backend SQLAlchemy models; the rule above is for generated model folders.
+!backend/app/models/
+!backend/app/models/**
+backend/app/models/**/__pycache__/
+backend/app/models/**/*.pyc
 
 # OS files
 .DS_Store

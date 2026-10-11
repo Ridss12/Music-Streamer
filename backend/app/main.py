@@ -162,17 +162,17 @@ if os.path.isdir(FRONTEND_BUILD_DIR):
         name="static-assets"
     )
 
-    app.mount(
-        "/thumbnails",
-        StaticFiles(
-            directory=os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "thumbnails"
-            )
-        ),
-        name="thumbnails"
+    thumbnails_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "thumbnails")
     )
+    if os.path.isdir(thumbnails_dir):
+        app.mount(
+            "/thumbnails",
+            StaticFiles(directory=thumbnails_dir),
+            name="thumbnails"
+        )
+    else:
+        logger.info("Thumbnail directory not found; skipping /thumbnails mount")
 
     # SPA catch-all
     async def serve_spa(request: Request):

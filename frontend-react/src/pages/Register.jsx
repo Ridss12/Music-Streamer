@@ -43,27 +43,35 @@ export default function Register() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.fullName,
-          username: form.username,
-          email: form.email,
-          password: form.password,
-        }),
-      })
+      let res
+      try {
+        res = await fetch(`${API_BASE}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: form.fullName,
+            username: form.username,
+            email: form.email,
+            password: form.password,
+          }),
+        })
+      } catch {
+        setError(`Could not reach the backend at ${API_BASE}. Check the server connection.`)
+        return
+      }
 
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        setError(data.detail || 'Registration failed')
+        setError(data.detail || (res.status >= 500
+          ? 'The backend was reached but could not complete registration. Check the MySQL service and database credentials.'
+          : `Registration failed (${res.status})`))
         return
       }
 
       navigate('/login')
-    } catch (err) {
-      setError('Server error. Is the backend running?')
+    } catch {
+      setError('The backend returned an invalid response. Check the backend logs.')
     } finally {
       setLoading(false)
     }

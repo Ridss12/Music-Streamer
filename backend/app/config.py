@@ -15,7 +15,14 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "")
 DB_NAME = os.getenv("DB_NAME", "music_streamer")
 
 # Audio Storage Configuration
-AUDIO_STORAGE_PATH = os.getenv("AUDIO_STORAGE_PATH", "./songs")
+_audio_storage_path = os.path.expanduser(
+    os.getenv("AUDIO_STORAGE_PATH", "./songs")
+)
+if not os.path.isabs(_audio_storage_path):
+    backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _audio_storage_path = os.path.join(backend_root, _audio_storage_path)
+AUDIO_STORAGE_PATH = os.path.abspath(_audio_storage_path)
+os.makedirs(AUDIO_STORAGE_PATH, exist_ok=True)
 
 # JWT Secret for authentication
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-in-production")

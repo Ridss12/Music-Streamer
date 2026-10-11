@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
+import uuid
 import aiofiles
 from pathlib import Path
 import re
@@ -154,7 +155,11 @@ async def upload_song(
 ):
     """Upload a song and queue it for emotion analysis."""
 
-    file_ext = Path(file.filename).suffix.lower()
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Choose an audio file to upload.")
+
+    safe_original_name = Path(file.filename.replace("\\", "/")).name
+    file_ext = Path(safe_original_name).suffix.lower()
 
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -165,27 +170,33 @@ async def upload_song(
             )
         )
 
-    file_name = (
-        f"{len(os.listdir(AUDIO_STORAGE_PATH)) + 1}_"
-        f"{file.filename}"
-    )
+    os.makedirs(AUDIO_STORAGE_PATH, exist_ok=True)
+    safe_original_name = f"{Path(safe_original_name).stem[:160]}{file_ext}"
+    file_name = f"{uuid.uuid4().hex}_{safe_original_name}"
 
     file_path = os.path.join(
         AUDIO_STORAGE_PATH,
         file_name
     )
 
+    file_size = 0
     async with aiofiles.open(file_path, "wb") as f:
-        content = await file.read()
-        await f.write(content)
+        while chunk := await file.read(1024 * 1024):
+            await f.write(chunk)
+            file_size += len(chunk)
+
+    if file_size == 0:
+        os.remove(file_path)
+        raise HTTPException(status_code=400, detail="The selected audio file is empty.")
 
     song = Song(
-        title=title or Path(file.filename).stem,
+        title=title or Path(safe_original_name).stem,
         artist_name=artist_name,
         album_name=album_name,
         file_path=file_path,
         file_name=file_name,
         file_format=file_ext,
+        file_size=file_size,
         analysis_status=AnalysisStatus.PENDING
     )
 
@@ -629,7 +640,14 @@ def stream_song(
             detail="Song not found"
         )
 
-    file_path = song.file_path
+    file_path = Path(song.file_path)
+    current_directory_path = (
+        file_path if file_path.is_absolute() else file_path.resolve()
+    )
+    if not current_directory_path.exists():
+        current_directory_path = Path(AUDIO_STORAGE_PATH) / file_path.name
+    file_path = current_directory_path
+    file_path = str(file_path)
 
     if not file_path or not os.path.exists(
         file_path
@@ -651,7 +669,8 @@ def stream_song(
     return FileResponse(
         path=file_path,
         media_type=media_type,
-        filename=song.file_name
+        filename=song.file_name,
+        content_disposition_type="inline"
     )
 
 

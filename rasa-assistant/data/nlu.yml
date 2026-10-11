@@ -88,6 +88,26 @@ nlu:
     - पिछला गाना चलाओ
     - मागचं गाणं लावा
 
+- intent: create_playlist
+  examples: |
+    - create a playlist called [Road Trip](playlist)
+    - make a new playlist named [Workout](playlist)
+    - create playlist [Chill](playlist)
+    - make me a playlist called [Favorites](playlist)
+    - create a playlist named [Late Night](playlist)
+    - नया playlist [Workout](playlist) बनाओ
+    - [Chill](playlist) नाम की playlist बनाओ
+
+- intent: delete_playlist
+  examples: |
+    - delete playlist [Road Trip](playlist)
+    - delete my [Workout](playlist) playlist
+    - remove playlist [Chill](playlist)
+    - delete the playlist called [Favorites](playlist)
+    - remove my [Late Night](playlist) playlist
+    - [Workout](playlist) playlist delete karo
+    - [Chill](playlist) playlist हटा दो
+
 - intent: increase_volume
   examples: |
     - increase volume

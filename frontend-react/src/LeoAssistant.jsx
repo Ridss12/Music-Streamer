@@ -5,9 +5,16 @@ export default function LeoAssistant() {
   const recorderRef = useRef(null)
   const listeningRef = useRef(false)
   const processingRef = useRef(false)
+  const speakingRef = useRef(false)
+  const discardRecordingRef = useRef(false)
+  const speechTokenRef = useRef(0)
 
   const stopLeo = () => {
     listeningRef.current = false
+    speakingRef.current = false
+    discardRecordingRef.current = false
+    speechTokenRef.current += 1
+    window.speechSynthesis?.cancel()
 
     if (recorderRef.current?.state === 'recording') {
       recorderRef.current.stop()
@@ -68,16 +75,35 @@ export default function LeoAssistant() {
         return
       }
 
+      const directCommand = /^(?:(?:please|can you|could you)\s+)?(?:play(?:\s+.+)?|put on\s+.+|start\s+.+|pause(?:\s+music)?|resume(?:\s+music)?|continue(?:\s+playing)?|stop(?:\s+music)?|(?:next|skip)(?:\s+(?:song|track|this song))?|(?:previous|go back)(?:\s+(?:song|track))?|mute(?:\s+music)?|unmute(?:\s+music)?|shuffle(?:\s+(?:music|playlist))?|repeat(?:\s+(?:music|song|this song))?|(?:create|make)\s+(?:a\s+)?playlist\b.+|delete\s+(?:my\s+)?playlist\b.+)$/i.test(command)
+
+      // Leo listens continuously, but should only send commands after its wake
+      // phrase or when the user says a supported command directly. This keeps
+      // ordinary speech and Leo's own spoken reply out of the Rasa conversation.
+      if (!wakeWord && !directCommand) return
+
       console.log('Leo command:', command)
 
       const lowerCommand = command.toLowerCase().replace(/[.!?,;:]+$/g, '').trim()
+      const localCommandHandled =
+        /^(play|put on|start)\s+/i.test(command) ||
+        /^(pause|pause music|resume|resume music|stop|stop music|next|skip(\s+(song|track))?|play (the )?next song|previous|previous song|previous track|play (the )?previous song|go back|mute|mute music|unmute|unmute music|shuffle|shuffle music|shuffle playlist|repeat|repeat song|repeat this song)$/.test(lowerCommand)
 
-      if (/^(play|put on|start)\s+/i.test(command)) {
+      if (/^(next|skip)(\s+(song|track))?$/.test(lowerCommand) || /^(play )?(the )?next song$/.test(lowerCommand)) {
+        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'next' } }))
+      } else if (/^(previous|previous song|previous track|play (the )?previous song|go back)$/.test(lowerCommand)) {
+        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'previous' } }))
+      } else if (/^(play|put on|start)\s+/i.test(command)) {
+        const requestedSong = command
+          .replace(/^(play|put on|start)\s+/i, '')
+          .replace(/^(the\s+song|song|me)\s+/i, '')
+          .replace(/^['"“”]+|['"“”]+$/g, '')
+          .trim()
         window.dispatchEvent(
           new CustomEvent('leo-command', {
             detail: {
               action: 'play',
-              song: command.replace(/^(play|put on|start)\s+/i, '').trim()
+              song: requestedSong
             }
           })
         )
@@ -108,26 +134,6 @@ export default function LeoAssistant() {
             detail: { action: 'stop' }
           })
         )
-      } else if (
-        /^(next|skip)(\s+(song|track))?$/.test(lowerCommand) ||
-        lowerCommand === 'play the next song'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'next' }
-          })
-        )
-      } else if (
-        lowerCommand === 'previous' ||
-        lowerCommand === 'previous song' ||
-        lowerCommand === 'previous track' ||
-        lowerCommand === 'go back'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'previous' }
-          })
-        )
       } else if (/^(mute|mute music)$/.test(lowerCommand)) {
         window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'mute' } }))
       } else if (/^(unmute|unmute music)$/.test(lowerCommand)) {
@@ -153,6 +159,16 @@ export default function LeoAssistant() {
 
           if (rasaResponse.ok) {
             const rasaData = await rasaResponse.json()
+            if (!localCommandHandled) {
+              const rasaCommand = rasaData
+                .map(item => item.custom?.leo_command || item.leo_command)
+                .find(Boolean)
+              if (rasaCommand?.action) {
+                window.dispatchEvent(
+                  new CustomEvent('leo-command', { detail: rasaCommand })
+                )
+              }
+            }
             const responseText = rasaData
               .map(item => item.text || '')
               .filter(Boolean)
@@ -173,12 +189,28 @@ export default function LeoAssistant() {
   const speak = (text) => {
     if (!('speechSynthesis' in window)) return
 
+    const speechToken = ++speechTokenRef.current
+    speakingRef.current = true
+
+    if (recorderRef.current?.state === 'recording') {
+      discardRecordingRef.current = true
+      recorderRef.current.stop()
+    }
+
     window.speechSynthesis.cancel()
 
     const speech = new SpeechSynthesisUtterance(text)
     speech.rate = 1
     speech.pitch = 1
     speech.volume = 1
+    const resumeListening = () => {
+      if (speechToken !== speechTokenRef.current) return
+      setTimeout(() => {
+        if (speechToken === speechTokenRef.current) speakingRef.current = false
+      }, 700)
+    }
+    speech.onend = resumeListening
+    speech.onerror = resumeListening
 
     window.speechSynthesis.speak(speech)
   }
@@ -200,6 +232,10 @@ export default function LeoAssistant() {
 
       const listen = () => {
         if (!listeningRef.current) return
+        if (speakingRef.current || window.speechSynthesis?.speaking) {
+          setTimeout(listen, 300)
+          return
+        }
         if (recorderRef.current?.state === 'recording') return
 
         const mimeType =
@@ -220,8 +256,10 @@ export default function LeoAssistant() {
 
         recorder.onstop = async () => {
           recorderRef.current = null
+          const discardRecording = discardRecordingRef.current
+          discardRecordingRef.current = false
 
-          if (chunks.length > 0) {
+          if (!discardRecording && chunks.length > 0) {
             await processAudio(
               new Blob(chunks, { type: mimeType })
             )

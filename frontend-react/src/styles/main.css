@@ -506,9 +506,27 @@ nav .search .input-box::placeholder {
 .upload-status-list li.done{ background:rgba(76,175,80,.12); }
 .upload-status-list li.error{ background:rgba(255,77,109,.15); }
 .upload-name{
+    display:block;
+    min-width:0;
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
+}
+.upload-error-message{
+    display:block;
+    margin-top:3px;
+    color:#ffb4c1;
+    font-size:.7rem;
+    white-space:normal;
+    overflow-wrap:anywhere;
+}
+.playback-error{
+    display:block;
+    max-width:240px;
+    margin-top:3px;
+    color:#ffb4c1;
+    font-size:.68rem;
+    line-height:1.25;
 }
 .upload-icon{ flex-shrink:0; color:#aaa; }
 

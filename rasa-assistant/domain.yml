@@ -21,6 +21,8 @@ intents:
   - dislike_song
   - open_playlist
   - show_lyrics
+  - create_playlist
+  - delete_playlist
 
 actions:
   - action_play_music
@@ -33,6 +35,8 @@ actions:
   - action_decrease_volume
   - action_mute
   - action_unmute
+  - action_create_playlist
+  - action_delete_playlist
 
 entities:
   - song

@@ -97,6 +97,16 @@ rules:
     - intent: open_playlist
     - action: utter_open_playlist
 
+- rule: Create playlist
+  steps:
+    - intent: create_playlist
+    - action: action_create_playlist
+
+- rule: Delete playlist
+  steps:
+    - intent: delete_playlist
+    - action: action_delete_playlist
+
 - rule: Show lyrics
   steps:
     - intent: show_lyrics

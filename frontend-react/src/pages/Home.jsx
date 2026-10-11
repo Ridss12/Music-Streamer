@@ -191,6 +191,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [currentTime, setCurrentTime] = useState(0)
+  const [playerError, setPlayerError] = useState('')
 
   const audioRef = useRef(null)
   const songsRef = useRef([])
@@ -212,7 +213,10 @@ export default function Home() {
       setProgress(audio.duration ? (audio.currentTime / audio.duration) * 100 : 0)
     }
 
-    const onLoaded = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
+    const onLoaded = () => {
+      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
+      setPlayerError('')
+    }
 
     const onEnded = () => {
       setProgress(0)
@@ -239,7 +243,10 @@ export default function Home() {
       else setIsPlaying(false)
     }
 
-    const onError = () => setIsPlaying(false)
+    const onError = () => {
+      setIsPlaying(false)
+      setPlayerError('Audio could not be loaded. Check that the file exists on the backend, then re-upload it if needed.')
+    }
 
     audio.addEventListener('timeupdate', onTime)
     audio.addEventListener('loadedmetadata', onLoaded)
@@ -266,10 +273,19 @@ export default function Home() {
 
   useEffect(() => {
     if (audioRef.current?.src) {
-      if (isPlaying) audioRef.current.play().catch(() => setIsPlaying(false))
+      if (isPlaying) {
+        audioRef.current.play().catch(error => {
+          setIsPlaying(false)
+          setPlayerError(
+            error?.name === 'NotAllowedError'
+              ? 'Your browser blocked playback. Click Play once, then try Leo again.'
+              : 'Audio could not be played. Check the backend stream and audio file.'
+          )
+        })
+      }
       else audioRef.current.pause()
     }
-  }, [isPlaying])
+  }, [isPlaying, currentSong.id])
 
   // ---------- fetch songs ----------
   const fetchSongs = async () => {
@@ -358,10 +374,17 @@ export default function Home() {
           method: 'POST',
           body: fd
         })
-        if (!res.ok) throw new Error('Upload failed')
+        const uploadResult = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(uploadResult.detail || uploadResult.message || `Upload failed (${res.status})`)
+        }
         setUploads(prev => prev.map(u => (u.id === uid ? { ...u, status: 'done' } : u)))
-      } catch {
-        setUploads(prev => prev.map(u => (u.id === uid ? { ...u, status: 'error' } : u)))
+      } catch (error) {
+        setUploads(prev => prev.map(u => (
+          u.id === uid
+            ? { ...u, status: 'error', error: error.message || 'Upload failed.' }
+            : u
+        )))
       }
     }
     fetchSongs()
@@ -371,10 +394,11 @@ export default function Home() {
   const playSong = (song) => {
     if (!song || !song.id) return
 
-    if (currentSong.id === song.id && isPlaying) {
-      setIsPlaying(false)
-      return
-    }
+    // Repeating the current track from Leo (or pressing Next with a one-song
+    // library) should not accidentally turn playback off.
+    if (currentSong.id === song.id && isPlaying) return
+
+    setPlayerError('')
 
     const nextCurrentSong = {
       id: song.id,
@@ -388,6 +412,16 @@ export default function Home() {
     if (audioRef.current) {
       audioRef.current.src = `${API_BASE}/songs/${song.id}/stream`
       audioRef.current.load()
+      // Start immediately from the click/voice event instead of waiting for a
+      // React effect, which can lose the browser's user-activation window.
+      audioRef.current.play().catch(error => {
+        setIsPlaying(false)
+        setPlayerError(
+          error?.name === 'NotAllowedError'
+            ? 'Your browser blocked playback. Click Play once, then try Leo again.'
+            : 'Audio could not be played. Check the backend stream and audio file.'
+        )
+      })
     }
 
     setIsPlaying(true)
@@ -428,7 +462,7 @@ export default function Home() {
   // player while Home is mounted. Keep the handlers current across renders.
   useEffect(() => {
     const handleLeoCommand = (event) => {
-      const { action, song: requestedSong } = event.detail || {}
+      const { action, song: requestedSong, playlist: requestedPlaylist } = event.detail || {}
       const list = songsRef.current.filter(song => song && song.id)
 
       switch (action) {
@@ -467,6 +501,13 @@ export default function Home() {
             setVolume(Math.max(0, Math.min(100, Number(event.detail.value))))
           }
           break
+        case 'volume_delta':
+          if (Number.isFinite(Number(event.detail?.value))) {
+            const nextVolume = Math.max(0, Math.min(100, volume + Number(event.detail.value)))
+            setVolume(nextVolume)
+            if (nextVolume > 0) setLastVolume(nextVolume)
+          }
+          break
         case 'mute':
           setLastVolume(volume > 0 ? volume : lastVolume)
           setVolume(0)
@@ -483,6 +524,29 @@ export default function Home() {
             playSong(choices[Math.floor(Math.random() * choices.length)])
           }
           break
+        case 'create_playlist': {
+          const name = String(requestedPlaylist || '').trim()
+          if (!name) break
+          setPlaylists(current => {
+            if (current.some(item => item.name.toLowerCase() === name.toLowerCase())) return current
+            const updated = [...current, { id: Date.now(), name, song_ids: [], created_at: Date.now() }]
+            savePlaylists(updated)
+            return updated
+          })
+          break
+        }
+        case 'delete_playlist': {
+          const name = String(requestedPlaylist || '').trim()
+          const target = playlists.find(item => item.name.toLowerCase() === name.toLowerCase())
+          if (!target || !window.confirm(`Delete playlist "${target.name}"? This can't be undone.`)) break
+          setPlaylists(current => {
+            const updated = current.filter(item => item.id !== target.id)
+            savePlaylists(updated)
+            return updated
+          })
+          setChooserSong(null)
+          break
+        }
         default:
           break
       }
@@ -490,7 +554,7 @@ export default function Home() {
 
     window.addEventListener('leo-command', handleLeoCommand)
     return () => window.removeEventListener('leo-command', handleLeoCommand)
-  }, [API_BASE, isPlaying, currentSong, volume, lastVolume])
+  }, [API_BASE, isPlaying, currentSong, volume, lastVolume, playlists])
 
   const toggleRepeat = () => setIsRepeat(p => !p)
 
@@ -718,7 +782,10 @@ export default function Home() {
       {/* NAVBAR */}
       <nav>
         <div className="left-half">
-          <div className="logo"><i className="fa-brands fa-itunes-note"></i></div>
+          <Link to="/" className="brand-lockup" aria-label="RiVibe home">
+            <img src="/rivibe-logo.png" alt="" className="brand-logo" />
+            <span>RiVibe</span>
+          </Link>
           <Link to="/" className="home" style={{ textDecoration: 'none', color: 'inherit' }}>
             <i className="fa-solid fa-house"></i>
           </Link>
@@ -806,7 +873,10 @@ export default function Home() {
                 <ul className="upload-status-list">
                   {uploads.map(u => (
                     <li key={u.id} className={u.status}>
-                      <span className="upload-name">{u.name}</span>
+                      <span className="upload-name" title={u.error || u.name}>
+                        {u.name}
+                        {u.error && <small className="upload-error-message">{u.error}</small>}
+                      </span>
                       <span className="upload-icon">
                         {u.status === 'uploading' && <i className="fa-solid fa-spinner fa-spin"></i>}
                         {u.status === 'done' && <i className="fa-solid fa-circle-check" style={{ color: '#4CAF50' }}></i>}
@@ -838,6 +908,22 @@ export default function Home() {
 
         {/* RIGHT MAIN CONTENT */}
         <div className="main-right-part">
+          <section className="welcome-hero">
+            <div className="welcome-copy">
+              <span className="eyebrow"><span className="status-dot" /> YOUR PERSONAL SOUNDTRACK</span>
+              <h1>Find your <span>RiVibe.</span></h1>
+              <p>Music for every mood, every moment, and everything in between.</p>
+              <button className="hero-cta" onClick={() => scrollToSection('all')}>
+                Explore your music <i className="fa-solid fa-arrow-right" />
+              </button>
+            </div>
+            <div className="welcome-art" aria-hidden="true">
+              <div className="welcome-orbit welcome-orbit-one" />
+              <div className="welcome-orbit welcome-orbit-two" />
+              <img src="/rivibe-logo.png" alt="" />
+            </div>
+          </section>
+
           {/* EMOTION STICKER BAR */}
           <div className="emoji-sticker-bar">
             {MOODS.map(m => (
@@ -929,6 +1015,7 @@ export default function Home() {
             <div className="song-text">
               <h4>{currentSong.title}</h4>
               <p>{currentSong.artist}</p>
+              {playerError && <small className="playback-error">{playerError}</small>}
             </div>
             <button className="icon-btn" onClick={(e) => toggleFavorite(e, currentSong.id)}>
               <i className={favs.includes(currentSong.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'}></i>
