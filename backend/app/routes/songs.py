@@ -2,10 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import hashlib
 import os
 import uuid
 import aiofiles
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import unicodedata
 from urllib.parse import quote
@@ -117,6 +118,43 @@ def _find_artist_image(artist_name):
 
 
 RIVIBE_MAPPING = _load_rivibe_mapping()
+_AUDIO_HASH_CACHE = {}
+
+
+def _audio_digest(file_path):
+    """Return a cached SHA-256 digest for an audio file."""
+    file_path = Path(file_path)
+    stat = file_path.stat()
+    cache_key = (str(file_path.resolve()), stat.st_size, stat.st_mtime_ns)
+    digest = _AUDIO_HASH_CACHE.get(cache_key)
+    if digest is None:
+        hasher = hashlib.sha256()
+        with file_path.open("rb") as audio_file:
+            for chunk in iter(lambda: audio_file.read(1024 * 1024), b""):
+                hasher.update(chunk)
+        digest = hasher.hexdigest()
+        _AUDIO_HASH_CACHE[cache_key] = digest
+    return digest
+
+
+def _available_audio_path(song):
+    """Return the on-disk audio file for a song, or None if it is missing."""
+    raw_path = str(song.file_path or "").strip()
+    if not raw_path:
+        return None
+
+    stored_path = Path(raw_path)
+    candidate = stored_path if stored_path.is_absolute() else stored_path.resolve()
+    if candidate.is_file():
+        return candidate
+
+    # Older DB rows may contain a path from another machine or OS. Uploaded
+    # files live in AUDIO_STORAGE_PATH, so try the stored filename there.
+    filename = PureWindowsPath(raw_path).name
+    if not filename:
+        filename = stored_path.name
+    fallback = Path(AUDIO_STORAGE_PATH) / filename
+    return fallback if fallback.is_file() else None
 
 
 # =========================================================
@@ -180,14 +218,31 @@ async def upload_song(
     )
 
     file_size = 0
+    upload_hasher = hashlib.sha256()
     async with aiofiles.open(file_path, "wb") as f:
         while chunk := await file.read(1024 * 1024):
             await f.write(chunk)
             file_size += len(chunk)
+            upload_hasher.update(chunk)
 
     if file_size == 0:
         os.remove(file_path)
         raise HTTPException(status_code=400, detail="The selected audio file is empty.")
+
+    upload_digest = upload_hasher.hexdigest()
+    for existing_song in db.query(Song).all():
+        if existing_song.file_size is not None and existing_song.file_size != file_size:
+            continue
+        existing_path = _available_audio_path(existing_song)
+        if existing_path and _audio_digest(existing_path) == upload_digest:
+            os.remove(file_path)
+            return {
+                "id": existing_song.id,
+                "title": existing_song.title,
+                "status": "duplicate",
+                "duplicate": True,
+                "message": "This audio file is already in your library."
+            }
 
     song = Song(
         title=title or Path(safe_original_name).stem,
@@ -237,10 +292,24 @@ def list_songs(
 
     songs = (
         query
-        .offset(skip)
-        .limit(limit)
+        .order_by(Song.id)
         .all()
     )
+
+    # Filter before pagination so missing files don't take up visible slots.
+    songs = [song for song in songs if _available_audio_path(song) is not None]
+
+    unique_songs = []
+    seen_audio_digests = set()
+    for song in songs:
+        audio_path = _available_audio_path(song)
+        digest = _audio_digest(audio_path)
+        if digest in seen_audio_digests:
+            continue
+        seen_audio_digests.add(digest)
+        unique_songs.append(song)
+
+    songs = unique_songs[skip:skip + limit]
 
     result = []
 
@@ -640,26 +709,14 @@ def stream_song(
             detail="Song not found"
         )
 
-    file_path = Path(song.file_path)
-    current_directory_path = (
-        file_path if file_path.is_absolute() else file_path.resolve()
-    )
-    if not current_directory_path.exists():
-        current_directory_path = Path(AUDIO_STORAGE_PATH) / file_path.name
-    file_path = current_directory_path
-    file_path = str(file_path)
-
-    if not file_path or not os.path.exists(
-        file_path
-    ):
+    file_path = _available_audio_path(song)
+    if file_path is None:
         raise HTTPException(
             status_code=404,
             detail="Audio file not found on disk"
         )
 
-    file_ext = Path(
-        file_path
-    ).suffix.lower()
+    file_ext = file_path.suffix.lower()
 
     media_type = MIME_TYPES.get(
         file_ext,
@@ -667,7 +724,7 @@ def stream_song(
     )
 
     return FileResponse(
-        path=file_path,
+        path=str(file_path),
         media_type=media_type,
         filename=song.file_name,
         content_disposition_type="inline"
@@ -714,11 +771,8 @@ def download_song(
             detail="Song not found"
         )
 
-    file_path = song.file_path
-
-    if not file_path or not os.path.exists(
-        file_path
-    ):
+    file_path = _available_audio_path(song)
+    if file_path is None:
         raise HTTPException(
             status_code=404,
             detail="Audio file not found on disk"
@@ -732,9 +786,7 @@ def download_song(
     db.add(download_record)
     db.commit()
 
-    file_ext = Path(
-        file_path
-    ).suffix.lower()
+    file_ext = file_path.suffix.lower()
 
     media_type = MIME_TYPES.get(
         file_ext,
@@ -742,7 +794,7 @@ def download_song(
     )
 
     return FileResponse(
-        path=file_path,
+        path=str(file_path),
         media_type=media_type,
         filename=song.file_name
     )

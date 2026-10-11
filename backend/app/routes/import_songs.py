@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+import hashlib
 import os
 from pathlib import Path
 
@@ -14,6 +15,14 @@ router = APIRouter(prefix="/import", tags=["import"])
 
 # Configuration
 ALLOWED_EXTENSIONS = {'.mp3', '.wav', '.flac', '.m4a', '.ogg'}
+
+
+def _file_digest(file_path):
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as audio_file:
+        for chunk in iter(lambda: audio_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 @router.post("/songs", response_model=dict)
@@ -50,6 +59,17 @@ async def import_songs(
     imported = 0
     skipped = 0
     queued = []
+    known_digests = set()
+
+    # Also catch duplicates already in the database, even if the file name or
+    # path differs. This set catches duplicates within the import folder too.
+    for existing_song in db.query(Song).all():
+        existing_path = Path(existing_song.file_path or "")
+        if not existing_path.is_file():
+            stored_name = Path(str(existing_song.file_path or "").replace("\\", "/")).name
+            existing_path = Path(AUDIO_STORAGE_PATH) / stored_name
+        if existing_path.is_file():
+            known_digests.add(_file_digest(existing_path))
 
     for file_name in audio_files:
         file_path = os.path.join(directory_path, file_name)
@@ -60,6 +80,12 @@ async def import_songs(
             skipped += 1
             continue
 
+        digest = _file_digest(file_path)
+        if digest in known_digests:
+            skipped += 1
+            continue
+        known_digests.add(digest)
+
         # Create song record
         song_title = Path(file_name).stem
         song = Song(
@@ -67,6 +93,7 @@ async def import_songs(
             file_path=file_path,
             file_name=file_name,
             file_format=Path(file_name).suffix,
+            file_size=os.path.getsize(file_path),
             analysis_status=AnalysisStatus.PENDING
         )
         db.add(song)

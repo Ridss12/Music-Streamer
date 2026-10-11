@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext.jsx'
 import { useServer } from '../ServerContext'
+import { filterUnavailableSongs, getUnavailableSongIds, hideUnavailableSong } from '../unplayableSongs.js'
 import '../styles/main.css'
 
 const MOODS = [
@@ -202,6 +203,16 @@ export default function Home() {
   const fileInputRef = useRef(null)
   const [uploads, setUploads] = useState([]) // [{id,name,status}] status: uploading|done|error
 
+  const removeUnavailableSong = (songId) => {
+    if (songId === null || songId === undefined) return
+    hideUnavailableSong(songId)
+    setSongs(prev => {
+      const available = prev.filter(song => String(song.id) !== String(songId))
+      songsRef.current = available
+      return available
+    })
+  }
+
   // ---------- audio element ----------
   useEffect(() => {
     const audio = new Audio()
@@ -244,6 +255,8 @@ export default function Home() {
     }
 
     const onError = () => {
+      const failedSongId = currentSongRef.current.id
+      removeUnavailableSong(failedSongId)
       setIsPlaying(false)
       setPlayerError('Audio could not be loaded. Check that the file exists on the backend, then re-upload it if needed.')
     }
@@ -275,6 +288,9 @@ export default function Home() {
     if (audioRef.current?.src) {
       if (isPlaying) {
         audioRef.current.play().catch(error => {
+          if (!['NotAllowedError', 'AbortError'].includes(error?.name)) {
+            removeUnavailableSong(currentSongRef.current.id)
+          }
           setIsPlaying(false)
           setPlayerError(
             error?.name === 'NotAllowedError'
@@ -296,7 +312,7 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/songs/?limit=100`, { headers })
       if (!res.ok) throw new Error('Failed to fetch songs')
       const data = await res.json()
-      setSongs(Array.isArray(data) ? data : [])
+      setSongs(filterUnavailableSongs(data))
       setError(null)
     } catch {
       setError('Failed to load songs. Please login to access music library.')
@@ -378,7 +394,11 @@ export default function Home() {
         if (!res.ok) {
           throw new Error(uploadResult.detail || uploadResult.message || `Upload failed (${res.status})`)
         }
-        setUploads(prev => prev.map(u => (u.id === uid ? { ...u, status: 'done' } : u)))
+        setUploads(prev => prev.map(u => (
+          u.id === uid
+            ? { ...u, status: uploadResult.duplicate ? 'duplicate' : 'done' }
+            : u
+        )))
       } catch (error) {
         setUploads(prev => prev.map(u => (
           u.id === uid
@@ -415,6 +435,9 @@ export default function Home() {
       // Start immediately from the click/voice event instead of waiting for a
       // React effect, which can lose the browser's user-activation window.
       audioRef.current.play().catch(error => {
+        if (!['NotAllowedError', 'AbortError'].includes(error?.name)) {
+          removeUnavailableSong(song.id)
+        }
         setIsPlaying(false)
         setPlayerError(
           error?.name === 'NotAllowedError'
@@ -677,7 +700,11 @@ export default function Home() {
     )
   })
 
-  const recentSongs = dedupeRecent(history).map(rec => byId.get(rec.id) || rec).filter(Boolean)
+  const unavailableIds = getUnavailableSongIds()
+  const recentSongs = dedupeRecent(history)
+    .filter(rec => !unavailableIds.has(String(rec.id)))
+    .map(rec => byId.get(rec.id) || rec)
+    .filter(Boolean)
   const favSongs = favs.map(id => byId.get(id)).filter(Boolean)
   const sessions = previousSessions(history)
   const playlistRows = playlists.map(p => ({
@@ -875,11 +902,13 @@ export default function Home() {
                     <li key={u.id} className={u.status}>
                       <span className="upload-name" title={u.error || u.name}>
                         {u.name}
+                        {u.status === 'duplicate' && <small>Already in your library</small>}
                         {u.error && <small className="upload-error-message">{u.error}</small>}
                       </span>
                       <span className="upload-icon">
                         {u.status === 'uploading' && <i className="fa-solid fa-spinner fa-spin"></i>}
                         {u.status === 'done' && <i className="fa-solid fa-circle-check" style={{ color: '#4CAF50' }}></i>}
+                        {u.status === 'duplicate' && <i className="fa-solid fa-circle-info" title="Already in your library"></i>}
                         {u.status === 'error' && <i className="fa-solid fa-circle-xmark" style={{ color: '#ff4d6d' }}></i>}
                       </span>
                     </li>
@@ -974,6 +1003,11 @@ export default function Home() {
               )}
 
               {renderSection(
+                'all', 'All Songs', allSongs.slice(0, 10), '🎵',
+                'No songs match your search.'
+              )}
+
+              {renderSection(
                 'recent', 'Recently Played', recentSongs, '🕘',
                 'Nothing played yet — tap a song below to start.'
               )}
@@ -998,10 +1032,6 @@ export default function Home() {
                 )
               )}
 
-              {renderSection(
-                'all', 'All Songs', allSongs, '🎵',
-                'No songs match your search.'
-              )}
             </>
           )}
         </div>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useServer } from '../ServerContext.jsx'
 import { useAuth } from '../AuthContext.jsx'
+import { filterUnavailableSongs, hideUnavailableSong } from '../unplayableSongs.js'
 import '../styles/main.css'
 
 const MOOD_MAP = [
@@ -68,6 +69,14 @@ export default function Library() {
     const onEnded = () => playNext()
     const onError = (e) => {
       console.error('Audio error:', e)
+      const streamMatch = audioRef.current?.src.match(/\/songs\/(\d+)\/stream(?:[?#]|$)/)
+      if (streamMatch) {
+        const failedSongId = streamMatch[1]
+        hideUnavailableSong(failedSongId)
+        setSongs(prev => prev.filter(song => String(song.id) !== failedSongId))
+        setRecommendations(prev => prev.filter(song => String(song.id) !== failedSongId))
+        setPlaylist(prev => prev.filter(song => String(song.id) !== failedSongId))
+      }
       setIsPlaying(false)
     }
 
@@ -123,7 +132,7 @@ export default function Library() {
       setLoading(true)
       const res = await fetch(`${API_BASE}/songs/?limit=100`)
       const data = await res.json()
-      setSongs(data)
+      setSongs(filterUnavailableSongs(data))
     } catch (err) {
       console.error('Failed to fetch songs:', err)
     } finally {
@@ -146,7 +155,7 @@ export default function Library() {
       setRecLoading(true)
       const res = await fetch(`${API_BASE}/recommendations/?mood=${mood}&limit=20`)
       const data = await res.json()
-      setRecommendations(data)
+      setRecommendations(filterUnavailableSongs(data))
     } catch (err) {
       console.error('Failed to fetch recommendations:', err)
     } finally {

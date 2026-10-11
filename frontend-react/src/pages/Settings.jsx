@@ -827,7 +827,7 @@ const handleVoiceAssistantToggle = (enabled) => {
 
       const token = localStorage.getItem('music_auth_token')
 
-      const res = await fetch('/settings/playback', {
+      const res = await fetch(`${API_BASE}/settings/playback`, {
 
         method: 'PUT',
 
@@ -861,9 +861,9 @@ const handleVoiceAssistantToggle = (enabled) => {
 
       if (!res.ok) {
 
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
 
-        throw new Error(data.detail || 'Failed to save playback settings')
+        throw new Error(data.detail || `Failed to save playback settings (HTTP ${res.status})`)
 
       }
 
