@@ -1,16 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { DEFAULT_API_BASE } from './serviceUrls'
 
 // Server Context for shared API_BASE across all pages
 export const ServerContext = createContext()
 
 export function ServerProvider({ children }) {
   const [serverURL, setServerURL] = useState(() => {
+    if (import.meta.env.VITE_API_BASE_URL?.trim()) return DEFAULT_API_BASE
     const saved = localStorage.getItem('MUSIC_SERVER_URL')
     if (saved) return saved
-    // Auto-detect: same hostname as frontend or localhost
-    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'http://localhost:8000'
-      : `http://${window.location.hostname}:8000`
+    return DEFAULT_API_BASE
   })
 
   const [connected, setConnected] = useState(false)

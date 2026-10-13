@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { RASA_REST_URL, WHISPER_TRANSCRIBE_URL } from './serviceUrls'
 
 export default function LeoAssistant() {
   const streamRef = useRef(null)
@@ -37,9 +38,10 @@ export default function LeoAssistant() {
       const formData = new FormData()
       formData.append('file', blob, 'leo-command.webm')
 
-      const whisperResponse = await fetch(
-        'http://127.0.0.1:8001/transcribe',
-        {
+      if (!WHISPER_TRANSCRIBE_URL) {
+        throw new Error('Set VITE_WHISPER_BASE_URL to enable voice transcription on this site.')
+      }
+      const whisperResponse = await fetch(WHISPER_TRANSCRIBE_URL, {
           method: 'POST',
           body: formData
         }
@@ -148,9 +150,10 @@ export default function LeoAssistant() {
       // reply, so an unavailable or slow Rasa server must not block playback.
       void (async () => {
         try {
-          const rasaResponse = await fetch(
-            'http://127.0.0.1:5005/webhooks/rest/webhook',
-            {
+          if (!RASA_REST_URL) {
+            throw new Error('Set VITE_RASA_BASE_URL to enable voice commands on this site.')
+          }
+          const rasaResponse = await fetch(RASA_REST_URL, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ sender: 'leo-user', message: command })

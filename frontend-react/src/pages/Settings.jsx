@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useServer } from '../ServerContext'
+import { RASA_REST_URL, WHISPER_TRANSCRIBE_URL } from '../serviceUrls'
 import '../styles/settings.css'
 
 
@@ -376,7 +377,7 @@ export default function Settings() {
 
       const token = localStorage.getItem('music_auth_token')
 
-      const res = await fetch('/settings/profile', {
+      const res = await fetch(`${API_BASE}/settings/profile`, {
 
         method: 'PUT',
 
@@ -447,7 +448,7 @@ export default function Settings() {
 
       const token = localStorage.getItem('music_auth_token')
 
-      const res = await fetch('/settings/notifications', {
+      const res = await fetch(`${API_BASE}/settings/notifications`, {
 
         method: 'PUT',
 
@@ -566,7 +567,10 @@ export default function Settings() {
     const formData = new FormData()
     formData.append('file', blob, 'leo-command.webm')
 
-    const response = await fetch('http://127.0.0.1:8001/transcribe', {
+    if (!WHISPER_TRANSCRIBE_URL) {
+      throw new Error('Set VITE_WHISPER_BASE_URL to enable voice transcription on this site.')
+    }
+    const response = await fetch(WHISPER_TRANSCRIBE_URL, {
       method: 'POST',
       body: formData
     })
@@ -614,9 +618,10 @@ export default function Settings() {
 
     showMessage('success', `Leo: ${command}`)
 
-    const rasaResponse = await fetch(
-      'http://127.0.0.1:5005/webhooks/rest/webhook',
-      {
+    if (!RASA_REST_URL) {
+      throw new Error('Set VITE_RASA_BASE_URL to enable voice commands on this site.')
+    }
+    const rasaResponse = await fetch(RASA_REST_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -919,7 +924,7 @@ const handleVoiceAssistantToggle = (enabled) => {
 
       const token = localStorage.getItem('music_auth_token')
 
-      const res = await fetch('/settings/password', {
+      const res = await fetch(`${API_BASE}/settings/password`, {
 
         method: 'PUT',
 
@@ -983,7 +988,7 @@ const handleVoiceAssistantToggle = (enabled) => {
 
       const token = localStorage.getItem('music_auth_token')
 
-      const res = await fetch('/settings/preferences', {
+      const res = await fetch(`${API_BASE}/settings/preferences`, {
 
         method: 'PUT',
 
@@ -1057,7 +1062,7 @@ const handleVoiceAssistantToggle = (enabled) => {
 
         const token = localStorage.getItem('music_auth_token')
 
-        const res = await fetch('/settings/account', {
+        const res = await fetch(`${API_BASE}/settings/account`, {
 
           method: 'DELETE',
 

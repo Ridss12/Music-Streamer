@@ -20,6 +20,7 @@
 
 # Local database
 /backend/music_streamer.db
+/backend/music_streamer.db.pre-mysql-backup
 
 # Logs
 *.log

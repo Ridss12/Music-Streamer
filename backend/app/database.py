@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import (
     DB_TYPE,
@@ -16,8 +17,13 @@ if DB_TYPE == "sqlite":
     DATABASE_URL = f"sqlite:///{DB_PATH}"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 elif DB_TYPE == "mysql":
-    DATABASE_URL = (
-        f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    DATABASE_URL = URL.create(
+        "mysql+pymysql",
+        username=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=int(DB_PORT),
+        database=DB_NAME,
     )
     engine = create_engine(DATABASE_URL)
 else:
