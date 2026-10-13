@@ -641,6 +641,13 @@ export default function Settings() {
 
     console.log('Rasa response:', rasaData)
 
+    rasaData.forEach(item => {
+      const rasaCommand = item.custom?.leo_command || item.leo_command
+      if (rasaCommand?.action) {
+        window.dispatchEvent(new CustomEvent('leo-command', { detail: rasaCommand }))
+      }
+    })
+
     const responseText = rasaData
       .map(item => item.text || '')
       .filter(Boolean)
@@ -661,66 +668,6 @@ export default function Settings() {
       }
     }
 
-    const lowerCommand = command.toLowerCase()
-
-    if (lowerCommand.startsWith('play ')) {
-      const song = command.substring(5).trim()
-
-      window.dispatchEvent(
-        new CustomEvent('leo-command', {
-          detail: {
-            action: 'play',
-            song
-          }
-        })
-      )
-    } else if (
-      lowerCommand === 'pause' ||
-      lowerCommand === 'pause music'
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('leo-command', {
-          detail: { action: 'pause' }
-        })
-      )
-    } else if (
-      lowerCommand === 'resume' ||
-      lowerCommand === 'resume music'
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('leo-command', {
-          detail: { action: 'resume' }
-        })
-      )
-    } else if (
-      lowerCommand === 'stop' ||
-      lowerCommand === 'stop music'
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('leo-command', {
-          detail: { action: 'stop' }
-        })
-      )
-    } else if (
-      lowerCommand === 'next' ||
-      lowerCommand === 'next song'
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('leo-command', {
-          detail: { action: 'next' }
-        })
-      )
-    } else if (
-      lowerCommand === 'previous' ||
-      lowerCommand === 'previous song' ||
-      lowerCommand === 'previous track'
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('leo-command', {
-          detail: { action: 'previous' }
-        })
-      )
-    }
   } catch (err) {
     console.error('Leo processing error:', err)
     showMessage('error', 'Leo could not process the command')

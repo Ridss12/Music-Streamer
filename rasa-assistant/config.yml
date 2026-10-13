@@ -2,6 +2,7 @@ recipe: default.v1
 
 assistant_id: music_voice_assistant
 
+# Whisper translates speech into English before it reaches this model.
 language: en
 
 pipeline:
@@ -15,6 +16,10 @@ pipeline:
     max_ngram: 17
   - name: DIETClassifier
     epochs: 100
+  - name: EntitySynonymMapper
+  - name: FallbackClassifier
+    threshold: 0.45
+    ambiguity_threshold: 0.1
 
 policies:
   - name: RulePolicy

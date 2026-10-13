@@ -54,11 +54,11 @@ export default function LeoAssistant() {
 
       if (!text) return
 
-      console.log('Leo heard:', text)
+      console.log('Leo heard:', text, `(source language: ${whisperData.language || 'unknown'})`)
 
-      // Whisper sometimes transcribes “Hey Leo” as “Heyho” or “Hey yo”.
-      // Leo is already explicitly enabled by the user, so also accept a
-      // direct supported command when the wake phrase is missed entirely.
+      // Whisper is configured to translate supported languages to English,
+      // which gives the existing Rasa model one consistent input language.
+      // Keep the detected source language for diagnostics and future replies.
       const wakeWord = text.match(/\b(?:hey\s*,?\s*(?:leo|leah|neo|yo)|heyho|hello\s*,?\s*leo)\b/i)
 
       let command = (wakeWord
@@ -77,7 +77,7 @@ export default function LeoAssistant() {
         return
       }
 
-      const directCommand = /^(?:(?:please|can you|could you)\s+)?(?:play(?:\s+.+)?|put on\s+.+|start\s+.+|pause(?:\s+music)?|resume(?:\s+music)?|continue(?:\s+playing)?|stop(?:\s+music)?|(?:next|skip)(?:\s+(?:song|track|this song))?|(?:previous|go back)(?:\s+(?:song|track))?|mute(?:\s+music)?|unmute(?:\s+music)?|shuffle(?:\s+(?:music|playlist))?|repeat(?:\s+(?:music|song|this song))?|(?:create|make)\s+(?:a\s+)?playlist\b.+|delete\s+(?:my\s+)?playlist\b.+)$/i.test(command)
+      const directCommand = /\b(?:play|put on|start|listen to|i want|give me|can i hear|pause|resume|continue|stop|next|skip|previous|go back|volume|louder|quieter|mute|unmute|shuffle|repeat|playlist|search|find|show lyrics)\b/i.test(command)
 
       // Leo listens continuously, but should only send commands after its wake
       // phrase or when the user says a supported command directly. This keeps
@@ -86,102 +86,32 @@ export default function LeoAssistant() {
 
       console.log('Leo command:', command)
 
-      const lowerCommand = command.toLowerCase().replace(/[.!?,;:]+$/g, '').trim()
-      const localCommandHandled =
-        /^(play|put on|start)\s+/i.test(command) ||
-        /^(pause|pause music|resume|resume music|stop|stop music|next|skip(\s+(song|track))?|play (the )?next song|previous|previous song|previous track|play (the )?previous song|go back|mute|mute music|unmute|unmute music|shuffle|shuffle music|shuffle playlist|repeat|repeat song|repeat this song)$/.test(lowerCommand)
-
-      if (/^(next|skip)(\s+(song|track))?$/.test(lowerCommand) || /^(play )?(the )?next song$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'next' } }))
-      } else if (/^(previous|previous song|previous track|play (the )?previous song|go back)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'previous' } }))
-      } else if (/^(play|put on|start)\s+/i.test(command)) {
-        const requestedSong = command
-          .replace(/^(play|put on|start)\s+/i, '')
-          .replace(/^(the\s+song|song|me)\s+/i, '')
-          .replace(/^['"“”]+|['"“”]+$/g, '')
-          .trim()
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: {
-              action: 'play',
-              song: requestedSong
-            }
-          })
-        )
-      } else if (
-        lowerCommand === 'pause' ||
-        lowerCommand === 'pause music'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'pause' }
-          })
-        )
-      } else if (
-        lowerCommand === 'resume' ||
-        lowerCommand === 'resume music'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'resume' }
-          })
-        )
-      } else if (
-        lowerCommand === 'stop' ||
-        lowerCommand === 'stop music'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'stop' }
-          })
-        )
-      } else if (/^(mute|mute music)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'mute' } }))
-      } else if (/^(unmute|unmute music)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'unmute' } }))
-      } else if (/^(shuffle|shuffle music|shuffle playlist)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'shuffle' } }))
-      } else if (/^(repeat|repeat song|repeat this song)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'repeat' } }))
+      if (!RASA_REST_URL) {
+        throw new Error('Set VITE_RASA_BASE_URL to enable voice commands on this site.')
       }
 
-      // Start the player action immediately. Rasa is only used for a spoken
-      // reply, so an unavailable or slow Rasa server must not block playback.
-      void (async () => {
-        try {
-          if (!RASA_REST_URL) {
-            throw new Error('Set VITE_RASA_BASE_URL to enable voice commands on this site.')
-          }
-          const rasaResponse = await fetch(RASA_REST_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sender: 'leo-user', message: command })
-            }
-          )
+      // Split coordinated requests such as “play this and turn it up” so the
+      // NLU can classify and execute each action independently.
+      const commands = command.split(/\s+(?:and then|then|and)\s+(?=(?:please\s+)?(?:play|put on|start|pause|resume|continue|stop|next|skip|previous|go back|increase|decrease|set|turn|raise|lower|mute|unmute|shuffle|repeat|create|delete|search|find|show)\b)/i).map(part => part.trim()).filter(Boolean)
+      for (const part of commands) {
+        const rasaResponse = await fetch(RASA_REST_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sender: 'leo-user', message: part })
+        })
 
-          if (rasaResponse.ok) {
-            const rasaData = await rasaResponse.json()
-            if (!localCommandHandled) {
-              const rasaCommand = rasaData
-                .map(item => item.custom?.leo_command || item.leo_command)
-                .find(Boolean)
-              if (rasaCommand?.action) {
-                window.dispatchEvent(
-                  new CustomEvent('leo-command', { detail: rasaCommand })
-                )
-              }
-            }
-            const responseText = rasaData
-              .map(item => item.text || '')
-              .filter(Boolean)
-              .join(' ')
-            if (responseText) speak(responseText)
+        if (!rasaResponse.ok) throw new Error(`Rasa request failed (${rasaResponse.status})`)
+
+        const rasaData = await rasaResponse.json()
+        for (const item of rasaData) {
+          const rasaCommand = item.custom?.leo_command || item.leo_command
+          if (rasaCommand?.action) {
+            window.dispatchEvent(new CustomEvent('leo-command', { detail: rasaCommand }))
           }
-        } catch (error) {
-          console.warn('Leo conversational service unavailable:', error)
         }
-      })()
+        const responseText = rasaData.map(item => item.text || '').filter(Boolean).join(' ')
+        if (responseText) speak(responseText)
+      }
     } catch (error) {
       console.error('Leo error:', error)
     } finally {

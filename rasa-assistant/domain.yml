@@ -9,6 +9,7 @@ intents:
   - previous_song
   - increase_volume
   - decrease_volume
+  - set_volume
   - mute
   - unmute
   - shuffle
@@ -23,6 +24,8 @@ intents:
   - show_lyrics
   - create_playlist
   - delete_playlist
+  - play_mood
+  - nlu_fallback
 
 actions:
   - action_play_music
@@ -37,12 +40,25 @@ actions:
   - action_unmute
   - action_create_playlist
   - action_delete_playlist
+  - action_shuffle
+  - action_repeat_song
+  - action_search_song
+  - action_search_artist
+  - action_play_mood
+  - action_add_to_playlist
+  - action_remove_from_playlist
+  - action_like_song
+  - action_dislike_song
+  - action_open_playlist
+  - action_set_volume
 
 entities:
   - song
   - artist
   - playlist
   - genre
+  - mood
+  - volume
 
 slots:
   song:
@@ -68,6 +84,18 @@ slots:
     mappings:
       - type: from_entity
         entity: genre
+
+  mood:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: mood
+
+  volume:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: volume
 
 responses:
   utter_play_music:
@@ -128,7 +156,10 @@ responses:
     - text: "Opening your playlist."
 
   utter_show_lyrics:
-    - text: "Showing the lyrics."
+    - text: "Lyrics are not available in this version yet."
 
   utter_default:
     - text: "Sorry, I didn't understand that music command."
+
+  utter_nlu_fallback:
+    - text: "I couldn't understand that command. Please say it another way."

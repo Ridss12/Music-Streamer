@@ -20,17 +20,44 @@ nlu:
     - music chalao
     - please play a song
     - can you play some music
+    - I want to hear [Kesariya](song)
+    - put on [Believer](song) by [Imagine Dragons](artist)
+    - play the latest song by [Arijit Singh](artist)
+    - play something from [Taylor Swift](artist)
+    - start playing [Perfect](song)
+    - I would like to listen to [Shape of You](song)
+    - play songs from [The Weeknd](artist)
+    - find and play [Kesariya](song)
+    - can I hear [Arijit Singh](artist)
     - मुझे हैप्पी बर्थडे गाना चलाओ
     - गाना बजाओ
     - म्यूजिक चलाओ
     - [Arijit Singh](artist) चे गाणे लावा
     - गाणं चालू करा
 
+- intent: play_mood
+  examples: |
+    - play [romantic](mood) songs
+    - play some [happy](mood) music
+    - I want [sad](mood) songs
+    - find [energetic](mood) music for me
+    - play something [calm](mood)
+    - put on [angry](mood) music
+    - play songs that match a [romantic](mood) mood
+    - I want to listen to [romantic](mood) songs
+    - play [happy](mood) songs for me
+    - give me some [calm](mood) music
+    - play [romantic](mood) Marathi songs
+
 - intent: pause_music
   examples: |
     - pause the song
     - pause music
     - please pause
+    - stop playing for a moment
+    - hold the music
+    - I need a pause
+    - pause playback
     - pause
     - song pause karo
     - music pause karo
@@ -45,6 +72,9 @@ nlu:
     - resume music
     - continue playing
     - continue the song
+    - carry on playing
+    - start the music again
+    - keep playing
     - play again
     - song resume karo
     - gana fir se chalao
@@ -57,6 +87,8 @@ nlu:
     - stop music
     - stop
     - completely stop the music
+    - turn the music off
+    - stop playback now
     - song band karo
     - gana band karo
     - music bandh karo
@@ -70,6 +102,8 @@ nlu:
     - next
     - skip this song
     - play the next track
+    - skip to the next track
+    - move to the next song
     - agla gana chalao
     - next gana
     - agla song play karo
@@ -82,6 +116,8 @@ nlu:
     - previous song
     - previous
     - go back to previous song
+    - return to the last track
+    - play the song before this one
     - last song
     - pichla gana chalao
     - pichla song play karo
@@ -114,6 +150,9 @@ nlu:
     - turn up the volume
     - volume up
     - make it louder
+    - raise the volume
+    - turn the music up
+    - increase the sound
     - volume badhao
     - awaaz badhao
     - volume thoda zyada karo
@@ -126,11 +165,23 @@ nlu:
     - turn down the volume
     - volume down
     - make it quieter
+    - lower the volume
+    - turn the music down
+    - reduce the sound
     - volume kam karo
     - awaaz kam karo
     - thoda volume kam karo
     - आवाज कम करो
     - आवाज कमी करा
+
+- intent: set_volume
+  examples: |
+    - set the volume to [50](volume) percent
+    - set volume [30](volume)
+    - change the volume to [75](volume)
+    - make the volume [20](volume) percent
+    - set sound level to [60](volume)
+    - volume [40](volume)
 
 - intent: mute
   examples: |
@@ -147,6 +198,8 @@ nlu:
     - unmute
     - unmute the music
     - turn sound on
+    - restore audio
+    - enable the sound
     - restore the sound
     - music unmute karo
     - awaaz chalu karo
@@ -159,6 +212,8 @@ nlu:
     - shuffle the playlist
     - play songs randomly
     - random songs play karo
+    - play a random track
+    - mix up the songs
     - playlist shuffle karo
     - गाणी shuffle करा
     - गाणे random वाजवा
@@ -169,6 +224,8 @@ nlu:
     - repeat this song
     - replay the song
     - play this song again
+    - put this track on repeat
+    - keep replaying this song
     - song repeat karo
     - gana repeat karo
     - हे गाणं पुन्हा वाजवा

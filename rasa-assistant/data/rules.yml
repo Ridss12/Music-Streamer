@@ -42,6 +42,11 @@ rules:
     - intent: decrease_volume
     - action: action_decrease_volume
 
+- rule: Set volume level
+  steps:
+    - intent: set_volume
+    - action: action_set_volume
+
 - rule: Mute
   steps:
     - intent: mute
@@ -55,47 +60,47 @@ rules:
 - rule: Shuffle music
   steps:
     - intent: shuffle
-    - action: utter_shuffle
+    - action: action_shuffle
 
 - rule: Repeat song
   steps:
     - intent: repeat_song
-    - action: utter_repeat_song
+    - action: action_repeat_song
 
 - rule: Search song
   steps:
     - intent: search_song
-    - action: utter_search_song
+    - action: action_search_song
 
 - rule: Search artist
   steps:
     - intent: search_artist
-    - action: utter_search_artist
+    - action: action_search_artist
 
 - rule: Add to playlist
   steps:
     - intent: add_to_playlist
-    - action: utter_add_to_playlist
+    - action: action_add_to_playlist
 
 - rule: Remove from playlist
   steps:
     - intent: remove_from_playlist
-    - action: utter_remove_from_playlist
+    - action: action_remove_from_playlist
 
 - rule: Like song
   steps:
     - intent: like_song
-    - action: utter_like_song
+    - action: action_like_song
 
 - rule: Dislike song
   steps:
     - intent: dislike_song
-    - action: utter_dislike_song
+    - action: action_dislike_song
 
 - rule: Open playlist
   steps:
     - intent: open_playlist
-    - action: utter_open_playlist
+    - action: action_open_playlist
 
 - rule: Create playlist
   steps:
@@ -111,3 +116,13 @@ rules:
   steps:
     - intent: show_lyrics
     - action: utter_show_lyrics
+
+- rule: Play music for a mood
+  steps:
+    - intent: play_mood
+    - action: action_play_mood
+
+- rule: Explain unsupported command
+  steps:
+    - intent: nlu_fallback
+    - action: utter_nlu_fallback

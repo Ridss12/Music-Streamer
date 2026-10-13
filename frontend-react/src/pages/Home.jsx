@@ -485,7 +485,7 @@ export default function Home() {
   // player while Home is mounted. Keep the handlers current across renders.
   useEffect(() => {
     const handleLeoCommand = (event) => {
-      const { action, song: requestedSong, playlist: requestedPlaylist } = event.detail || {}
+      const { action, song: requestedSong, playlist: requestedPlaylist, query: requestedQuery, mood: requestedMood } = event.detail || {}
       const list = songsRef.current.filter(song => song && song.id)
 
       switch (action) {
@@ -498,6 +498,74 @@ export default function Home() {
             )
           )
           if (match) playSong(match)
+          break
+        }
+        case 'search': {
+          const query = String(requestedQuery || requestedSong || '').trim()
+          if (!query) break
+          setSearchTerm(query)
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+          break
+        }
+        case 'play_mood': {
+          const mood = String(requestedMood || '').trim().toLowerCase()
+          if (!['happy', 'sad', 'energetic', 'calm', 'angry', 'romantic'].includes(mood)) break
+          void (async () => {
+            try {
+              const response = await fetch(`${API_BASE}/recommendations/?mood=${encodeURIComponent(mood)}&limit=20`)
+              if (!response.ok) throw new Error('No recommendations for this mood')
+              const recommendations = await response.json()
+              if (recommendations.length) {
+                setMoodSongs(recommendations)
+                setActiveMood(mood)
+                playSong(recommendations[0])
+              }
+            } catch (error) {
+              console.warn('Leo mood request failed:', error)
+            }
+          })()
+          break
+        }
+        case 'like':
+        case 'dislike': {
+          const currentId = currentSongRef.current.id
+          if (!currentId) break
+          setFavs(current => {
+            const exists = current.includes(currentId)
+            const next = action === 'like'
+              ? (exists ? current : [currentId, ...current])
+              : current.filter(id => id !== currentId)
+            saveJSON(FAVS_KEY, next)
+            return next
+          })
+          break
+        }
+        case 'add_to_playlist':
+        case 'remove_from_playlist': {
+          const currentId = currentSongRef.current.id
+          const target = requestedPlaylist
+            ? playlists.find(item => item.name.toLowerCase() === String(requestedPlaylist).toLowerCase())
+            : playlists[0]
+          if (!currentId || !target) break
+          setPlaylists(current => {
+            const updated = current.map(item => {
+              if (item.id !== target.id) return item
+              const ids = item.song_ids || []
+              const songIds = action === 'add_to_playlist'
+                ? (ids.includes(currentId) ? ids : [...ids, currentId])
+                : ids.filter(id => id !== currentId)
+              return { ...item, song_ids: songIds }
+            })
+            savePlaylists(updated)
+            return updated
+          })
+          break
+        }
+        case 'open_playlist': {
+          const target = requestedPlaylist
+            ? playlists.find(item => item.name.toLowerCase() === String(requestedPlaylist).toLowerCase())
+            : playlists[0]
+          if (target) scrollToSection(`playlist-${target.id}`)
           break
         }
         case 'pause':

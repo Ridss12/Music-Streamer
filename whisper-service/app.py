@@ -44,17 +44,21 @@ async def transcribe(file: UploadFile = File(...)):
     try:
         result = model.transcribe(
             audio_path,
-            language="en",
+            # Whisper detects the spoken language and translates into English
+            # so the existing Rasa intent model can understand the command.
+            task="translate",
             temperature=0.0,
             initial_prompt=(
-                "Music player voice commands: play a song, pause music, "
-                "resume music, stop music, next song, previous song."
+                "Music player commands: play, pause, resume, stop, next, "
+                "previous, volume, mute, shuffle, repeat, and playlists. "
+                "Preserve song titles and artist names."
             ),
         )
 
         return {
             "text": result["text"].strip(),
-            "language": result.get("language")
+            "language": result.get("language"),
+            "translated": True,
         }
 
     finally:
