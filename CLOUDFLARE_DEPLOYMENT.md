@@ -95,25 +95,19 @@ if the repository lives elsewhere.
 - Build command: `npm run build`
 - Build output directory: `dist`
 
-Set these Pages build environment variables, replacing the hostname with the
-one reported by Tailscale:
-
-```text
-VITE_API_BASE_URL=https://music-pc.example-tailnet.ts.net
-VITE_WHISPER_BASE_URL=https://music-pc.example-tailnet.ts.net/whisper
-```
-
-The frontend appends `/transcribe` to the Whisper URL. Leo uses explicit
-commands such as “Hey Leo, play [song title],” “pause song,” “volume up,”
+Leo uses explicit commands such as “Hey Leo, play [song title],” “pause song,” “volume up,”
 “volume down,” “mute,” “skip song,” and “previous song.” It does not require
 Rasa. Do not put database credentials, `JWT_SECRET_KEY`, or any other secret
 in a `VITE_*` variable; these values are embedded in the public frontend build.
 
-On Cloudflare Pages, voice audio goes through the same-origin Pages Function at
-`/api/whisper/transcribe`, which forwards it to the PC's Funnel URL. Update the
-`WHISPER_UPSTREAM_URL` constant in
-`frontend-react/functions/api/whisper/transcribe.js` if that hostname changes.
-Local frontend development can keep using `VITE_WHISPER_BASE_URL` directly.
+On Cloudflare Pages, frontend API requests use same-origin Pages Functions:
+`/api/backend/*` proxies to the FastAPI backend, and `/api/whisper/transcribe`
+proxies voice audio to Whisper. This avoids browsers connecting directly to
+the PC's Tailscale IP. Update the upstream host constants in
+`frontend-react/functions/api/backend/[[path]].js` and
+`frontend-react/functions/api/whisper/transcribe.js` if the Funnel hostname
+changes. For local frontend development, the app uses services on
+`127.0.0.1` by default.
 
 ## Browser origins
 

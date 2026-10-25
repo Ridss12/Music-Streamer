@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { DEFAULT_API_BASE } from './serviceUrls'
+import { DEFAULT_API_BASE, IS_LOCAL_FRONTEND } from './serviceUrls'
 
 // Server Context for shared API_BASE across all pages
 export const ServerContext = createContext()
 
 export function ServerProvider({ children }) {
   const [serverURL, setServerURL] = useState(() => {
-    if (import.meta.env.VITE_API_BASE_URL?.trim()) return DEFAULT_API_BASE
+    if (!IS_LOCAL_FRONTEND || import.meta.env.VITE_API_BASE_URL?.trim()) return DEFAULT_API_BASE
     const saved = localStorage.getItem('MUSIC_SERVER_URL')
     if (saved) return saved
     return DEFAULT_API_BASE
