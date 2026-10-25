@@ -55,9 +55,10 @@ export default function LeoAssistant() {
 
       if (!text) return
 
-      console.log('Leo heard:', text)
-
-      const wakeWord = text.match(/\bhey\s*,?\s*leo\b/i)
+      // Whisper can mishear this very short phrase as “Hey, what?” or “Hello”.
+      // Accept common wake-word transcriptions, but still require a supported
+      // command before dispatching any player action.
+      const wakeWord = text.match(/\b(?:hey\s*,?\s*(?:leo|leah|neo|yo|what)|heyho|hello(?:\s*,?\s*leo)?)\b/i)
       let command = text
       if (wakeWord) {
         wakeWordUntilRef.current = Date.now() + 10_000

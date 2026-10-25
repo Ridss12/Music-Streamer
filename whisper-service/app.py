@@ -46,10 +46,7 @@ async def transcribe(file: UploadFile = File(...)):
             audio_path,
             language="en",
             temperature=0.0,
-            initial_prompt=(
-                "Music player voice commands: play a song, pause music, "
-                "resume music, stop music, next song, previous song."
-            ),
+            condition_on_previous_text=False,
         )
 
         return {
