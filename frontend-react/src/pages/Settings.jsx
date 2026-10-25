@@ -1294,9 +1294,6 @@ export default function Settings() {
                   <li>“mute” or “unmute”</li>
                   <li>“skip song” or “previous song”</li>
                 </ul>
-                <p className="form-hint" style={{ margin: '10px 0 0' }}>
-                  Commands are matched directly; Rasa is no longer required.
-                </p>
               </div>
 
 

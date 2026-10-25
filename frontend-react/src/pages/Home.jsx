@@ -695,6 +695,7 @@ export default function Home() {
   }
 
   const onMoodToggle = async (m) => {
+    setActiveLibrarySection('all')
     if (activeMood === m.key) {
       setActiveMood(null)
       setMoodSongs([])
@@ -960,6 +961,36 @@ export default function Home() {
     </div>
   )
 
+  const renderMoodSection = () => (
+    <div className="music-section" key="mood">
+      <div className="row-header">
+        <h2>
+          {MOODS.find(m => m.key === activeMood)?.emoji} {MOODS.find(m => m.key === activeMood)?.label} Songs
+          <span className="count-chip">{moodSongs.length}</span>
+        </h2>
+      </div>
+      {moodLoading ? (
+        <p className="load-hint">Finding songs for this mood...</p>
+      ) : moodError ? (
+        <p className="load-error">{moodError}</p>
+      ) : moodSongs.length > 0 ? (
+        renderRow('mood', moodSongs)
+      ) : (
+        <p className="empty-hint">No analyzed songs match this mood yet.</p>
+      )}
+    </div>
+  )
+
+  const renderLibrarySection = section => renderSection(
+    section.key,
+    section.title,
+    section.items,
+    section.emoji,
+    section.empty,
+    section.mode || 'add',
+    section.playlist || null,
+  )
+
   return (
     <>
       {/* NAVBAR */}
@@ -1117,35 +1148,17 @@ export default function Home() {
 
           {!loading && !error && (
             <>
-              {activeMood && (
-                <div className="music-section">
-                  <div className="row-header">
-                    <h2>
-                      {MOODS.find(m => m.key === activeMood)?.emoji} {MOODS.find(m => m.key === activeMood)?.label} Songs
-                      <span className="count-chip">{moodSongs.length}</span>
-                    </h2>
-                  </div>
-                  {moodLoading ? (
-                    <p className="load-hint">Finding songs for this mood...</p>
-                  ) : moodError ? (
-                    <p className="load-error">{moodError}</p>
-                  ) : moodSongs.length > 0 ? (
-                    renderRow('mood', moodSongs)
-                  ) : (
-                    <p className="empty-hint">No analyzed songs match this mood yet.</p>
-                  )}
-                </div>
-              )}
+              {activeMood && activeLibrarySection === 'all' && renderMoodSection()}
 
-              {orderedLibrarySections.map(section => renderSection(
-                section.key,
-                section.title,
-                section.items,
-                section.emoji,
-                section.empty,
-                section.mode || 'add',
-                section.playlist || null,
-              ))}
+              {activeLibrarySection === 'all' ? (
+                orderedLibrarySections.map(renderLibrarySection)
+              ) : (
+                <>
+                  {orderedLibrarySections.slice(0, 2).map(renderLibrarySection)}
+                  {activeMood && renderMoodSection()}
+                  {orderedLibrarySections.slice(2).map(renderLibrarySection)}
+                </>
+              )}
 
             </>
           )}
