@@ -1,14 +1,15 @@
 const BACKEND_ORIGIN = 'https://cachyos-x8664.tailff30fd.ts.net'
 
-export async function onRequest({ request, params }) {
+export async function onRequest({ request }) {
   const origin = request.headers.get('Origin')
   if (origin && origin !== new URL(request.url).origin) {
     return new Response('Forbidden', { status: 403 })
   }
 
-  const path = Array.isArray(params.path) ? params.path.join('/') : (params.path || '')
+  const requestUrl = new URL(request.url)
+  const path = requestUrl.pathname.slice('/api/backend'.length).replace(/^\/+/, '')
   const target = new URL(path, `${BACKEND_ORIGIN}/`)
-  target.search = new URL(request.url).search
+  target.search = requestUrl.search
 
   const headers = new Headers(request.headers)
   for (const header of [

@@ -4,6 +4,7 @@ export const IS_LOCAL_FRONTEND = (() => {
   const hostname = window.location.hostname
   return hostname === 'localhost' || hostname === '127.0.0.1'
 })()
+const IS_TAILSCALE_FRONTEND = window.location.hostname.endsWith('.ts.net')
 
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim()
 
@@ -11,6 +12,8 @@ export const DEFAULT_API_BASE = IS_LOCAL_FRONTEND
   ? configuredApiBase
     ? trimTrailingSlashes(configuredApiBase)
     : 'http://localhost:8000'
+  : IS_TAILSCALE_FRONTEND
+    ? window.location.origin
   : window.location.protocol === 'https:'
     ? `${window.location.origin}/api/backend`
     : `http://${window.location.hostname}:8000`
@@ -26,4 +29,6 @@ const whisperBase = serviceBase(
 )
 export const WHISPER_TRANSCRIBE_URL = IS_LOCAL_FRONTEND
   ? `${whisperBase}/transcribe`
-  : `${window.location.origin}/api/whisper/transcribe`
+  : IS_TAILSCALE_FRONTEND
+    ? `${window.location.origin}/whisper/transcribe`
+    : `${window.location.origin}/api/whisper/transcribe`

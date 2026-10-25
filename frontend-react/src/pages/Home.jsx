@@ -317,16 +317,19 @@ export default function Home() {
       const token = localStorage.getItem('music_auth_token')
       const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const res = await fetch(`${API_BASE}/songs/?limit=100`, { headers })
-      if (!res.ok) throw new Error('Failed to fetch songs')
+      if (res.status === 401) throw new Error('Please login to access the music library.')
+      if (!res.ok) throw new Error(`Failed to load songs (server returned ${res.status}).`)
       const data = await res.json()
+      if (!Array.isArray(data)) throw new Error('The server returned an unexpected songs response.')
       setSongs(previous => {
         const merged = [...filterUnavailableSongs(data), ...previous.filter(song => song?.isLocal)]
         songsRef.current = merged
         return merged
       })
       setError(null)
-    } catch {
-      setError('Failed to load songs. Please login to access music library.')
+    } catch (error) {
+      console.error('Failed to load songs:', error)
+      setError(error.message || 'Failed to load songs. Check the server connection.')
     } finally {
       setLoading(false)
     }
