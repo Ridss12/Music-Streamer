@@ -28,6 +28,7 @@
 
 # Logs
 *.log
+/.run/
 
 # Rasa cache and trained models
 **/.rasa/

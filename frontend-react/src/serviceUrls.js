@@ -5,6 +5,7 @@ export const IS_LOCAL_FRONTEND = (() => {
   return hostname === 'localhost' || hostname === '127.0.0.1'
 })()
 const IS_TAILSCALE_FRONTEND = window.location.hostname.endsWith('.ts.net')
+const IS_SELF_HOSTED_BACKEND = IS_TAILSCALE_FRONTEND || window.location.port === '8000'
 
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim()
 
@@ -29,6 +30,6 @@ const whisperBase = serviceBase(
 )
 export const WHISPER_TRANSCRIBE_URL = IS_LOCAL_FRONTEND
   ? `${whisperBase}/transcribe`
-  : IS_TAILSCALE_FRONTEND
+  : IS_SELF_HOSTED_BACKEND
     ? `${window.location.origin}/whisper/transcribe`
     : `${window.location.origin}/api/whisper/transcribe`

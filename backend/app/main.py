@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, FileResponse
+from fastapi.responses import JSONResponse, HTMLResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.routing import Mount
 from contextlib import asynccontextmanager
+import httpx
 import logging
 import socket
 import os
@@ -124,6 +125,37 @@ def home():
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
+
+
+@app.post("/whisper/transcribe")
+async def proxy_whisper_transcription(request: Request):
+    """Forward same-origin browser transcription requests to local Whisper."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data;"):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Expected multipart audio upload"},
+        )
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(180.0, connect=5.0)) as client:
+            upstream = await client.post(
+                "http://127.0.0.1:8001/transcribe",
+                content=await request.body(),
+                headers={"Content-Type": content_type},
+            )
+    except httpx.RequestError:
+        logger.exception("Whisper transcription proxy failed")
+        return JSONResponse(
+            status_code=502,
+            content={"detail": "Whisper service is unavailable"},
+        )
+
+    return Response(
+        content=upstream.content,
+        status_code=upstream.status_code,
+        media_type=upstream.headers.get("content-type", "application/json"),
+    )
 
 
 @app.get("/api/server-info")
