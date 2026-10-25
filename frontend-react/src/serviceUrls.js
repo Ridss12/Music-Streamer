@@ -24,4 +24,6 @@ const whisperBase = serviceBase(
   import.meta.env.VITE_WHISPER_BASE_URL,
   'http://127.0.0.1:8001'
 )
-export const WHISPER_TRANSCRIBE_URL = whisperBase ? `${whisperBase}/transcribe` : ''
+export const WHISPER_TRANSCRIBE_URL = isLocalFrontend()
+  ? `${whisperBase}/transcribe`
+  : `${window.location.origin}/api/whisper/transcribe`

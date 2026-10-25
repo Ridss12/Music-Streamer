@@ -109,6 +109,12 @@ commands such as “Hey Leo, play [song title],” “pause song,” “volume u
 Rasa. Do not put database credentials, `JWT_SECRET_KEY`, or any other secret
 in a `VITE_*` variable; these values are embedded in the public frontend build.
 
+On Cloudflare Pages, voice audio goes through the same-origin Pages Function at
+`/api/whisper/transcribe`, which forwards it to the PC's Funnel URL. Update the
+`WHISPER_UPSTREAM_URL` constant in
+`frontend-react/functions/api/whisper/transcribe.js` if that hostname changes.
+Local frontend development can keep using `VITE_WHISPER_BASE_URL` directly.
+
 ## Browser origins
 
 Set `CORS_ORIGINS` in the backend and Whisper local environment files to the
