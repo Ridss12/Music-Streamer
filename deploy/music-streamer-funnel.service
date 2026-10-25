@@ -1,0 +1,10 @@
+[Unit]
+Description=Music Streamer Tailscale Funnel
+Requires=tailscaled.service caddy.service
+After=tailscaled.service caddy.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/tailscale funnel --https=443 8080
+ExecStopPost=-/usr/bin/tailscale funnel --https=443 off
+Restart=no

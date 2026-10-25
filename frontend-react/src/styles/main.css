@@ -258,6 +258,72 @@ nav .search .input-box::placeholder {
 
 .library{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
 .library p{ font-size:1.1rem; font-weight:700; color:rgb(255, 255, 255); }
+.library-heading{ margin-bottom:12px; }
+.library-add-audio{
+  width:34px;
+  height:34px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:50%;
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  cursor:pointer;
+}
+.library-add-audio:hover{ background:rgba(110,231,255,.2); color:#6EE7FF; }
+.visually-hidden-audio-input{ display:none; }
+.library-list{
+  height:auto;
+  max-height:calc(100% - 50px);
+  overflow-y:auto;
+  padding-right:2px;
+}
+.library-nav-item{
+  width:100%;
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 10px;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:rgba(239,243,255,.78);
+  text-align:left;
+  cursor:pointer;
+}
+.library-nav-item span{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.library-nav-item span i{ width:22px; color:rgba(198,211,255,.66); }
+.library-nav-item small{ color:rgba(198,211,255,.56); }
+.library-nav-item:hover,
+.library-nav-item.active{ background:rgba(110,231,255,.13); color:#fff; }
+.library-nav-item.active span i{ color:#6EE7FF; }
+.library-playlist-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin:16px 6px 5px;
+  color:rgba(198,211,255,.62);
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.library-playlist-heading button{
+  width:26px;
+  height:26px;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#c6d3ff;
+  cursor:pointer;
+}
+.library-playlist-heading button:hover{ background:rgba(255,255,255,.12); color:#6EE7FF; }
+.library-empty{ margin:4px 8px 10px; color:rgba(198,211,255,.48); font-size:.8rem; }
+.library-upload-status{ max-height:110px; margin-top:12px; overflow-y:auto; }
+.library-upload-status li{ padding:6px 8px; font-size:.75rem; }
+.library-upload-status .upload-name{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .box-container{
     height:calc(100% - 60px);
@@ -519,6 +585,21 @@ nav .search .input-box::placeholder {
     font-size:.7rem;
     white-space:normal;
     overflow-wrap:anywhere;
+}
+.local-audio-analysis{
+  margin-top: 6px;
+  color: #9df2c4;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+.analysis-retry{
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #ffd080;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
 }
 .playback-error{
     display:block;

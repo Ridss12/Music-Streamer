@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext.jsx'
 import { useServer } from '../ServerContext'
 import { filterUnavailableSongs, getUnavailableSongIds, hideUnavailableSong } from '../unplayableSongs.js'
+import { analyzeLocalAudio } from '../localAudioAnalysis.js'
 import '../styles/main.css'
 
 const MOODS = [
@@ -179,6 +180,7 @@ export default function Home() {
   const [newPlaylistName, setNewPlaylistName] = useState('')
   const [chooserSong, setChooserSong] = useState(null) // song whose add-to-playlist popover is open
   const [activeMood, setActiveMood] = useState(null)
+  const [activeLibrarySection, setActiveLibrarySection] = useState('all')
   const [moodSongs, setMoodSongs] = useState([])
   const [moodLoading, setMoodLoading] = useState(false)
   const [moodError, setMoodError] = useState(null)
@@ -199,9 +201,14 @@ export default function Home() {
   const currentSongRef = useRef({ title: '', artist: '', id: null })
   const repeatRef = useRef(false)
   const rowRefs = useRef({})
-  const sectionsRef = useRef({})
+  const sectionRefs = useRef({})
+  const mainContentRef = useRef(null)
   const fileInputRef = useRef(null)
-  const [uploads, setUploads] = useState([]) // [{id,name,status}] status: uploading|done|error
+  const [uploads, setUploads] = useState([]) // local-only analysis state
+
+  useEffect(() => () => {
+    songsRef.current.filter(song => song?.isLocal).forEach(song => URL.revokeObjectURL(song.objectUrl))
+  }, [])
 
   const removeUnavailableSong = (songId) => {
     if (songId === null || songId === undefined) return
@@ -312,7 +319,11 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/songs/?limit=100`, { headers })
       if (!res.ok) throw new Error('Failed to fetch songs')
       const data = await res.json()
-      setSongs(filterUnavailableSongs(data))
+      setSongs(previous => {
+        const merged = [...filterUnavailableSongs(data), ...previous.filter(song => song?.isLocal)]
+        songsRef.current = merged
+        return merged
+      })
       setError(null)
     } catch {
       setError('Failed to load songs. Please login to access music library.')
@@ -322,6 +333,45 @@ export default function Home() {
   }
 
   useEffect(() => { fetchSongs() }, [connected, API_BASE])
+
+  const pendingAnalysisIds = songs
+    .filter(song => !song.isLocal && ['pending', 'processing'].includes(song.analysis_status))
+    .map(song => song.id)
+    .join(',')
+
+  useEffect(() => {
+    if (!pendingAnalysisIds) return undefined
+    const refreshStatuses = async () => {
+      const ids = pendingAnalysisIds.split(',')
+      const updates = await Promise.all(ids.map(async id => {
+        try {
+          const response = await fetch(`${API_BASE}/songs/${id}/analysis-status`)
+          if (!response.ok) return null
+          const status = await response.json()
+          return [id, status.analysis_status]
+        } catch {
+          return null
+        }
+      }))
+      const statusById = new Map(updates.filter(Boolean))
+      if (statusById.size) {
+        setSongs(previous => {
+          let changed = false
+          const updated = previous.map(song => {
+            const status = statusById.get(String(song.id))
+            if (!status || status === song.analysis_status) return song
+            changed = true
+            return { ...song, analysis_status: status }
+          })
+          if (changed) songsRef.current = updated
+          return changed ? updated : previous
+        })
+      }
+    }
+    const timer = window.setInterval(refreshStatuses, 3000)
+    refreshStatuses()
+    return () => window.clearInterval(timer)
+  }, [pendingAnalysisIds, API_BASE])
 
   // ---------- download history ----------
   const loadDownloadedSongs = async () => {
@@ -373,41 +423,84 @@ export default function Home() {
     setDownloadsError(null)
   }
 
-  // ---------- upload songs ----------
+  // ---------- analyze local audio without sending it to the server ----------
   const handleFiles = async (files) => {
     const list = Array.from(files || [])
     if (list.length === 0) return
-    const newUploads = list.map(f => ({ id: `${Date.now()}-${f.name}-${Math.random()}`, name: f.name, status: 'uploading' }))
-    setUploads(prev => [...prev, ...newUploads])
+    const newUploads = []
+    const oversized = []
+    for (const file of list) {
+      if (file.size > 100 * 1024 * 1024) {
+        oversized.push(file)
+        continue
+      }
+      const id = `local-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`}`
+      newUploads.push({
+        id,
+        name: file.name,
+        status: 'analyzing',
+        song: {
+          id,
+          title: cleanTitle(file.name),
+          artist_name: 'Local audio',
+          file_name: file.name,
+          duration: null,
+          isLocal: true,
+          file,
+          objectUrl: URL.createObjectURL(file),
+          analysis_status: 'processing',
+        },
+      })
+    }
+    setUploads(prev => [
+      ...prev,
+      ...oversized.map(file => ({ id: `large-${Date.now()}-${Math.random()}`, name: file.name, status: 'error', error: 'Files must be 100 MB or smaller.' })),
+      ...newUploads.map(({ id, name, status }) => ({ id, name, status })),
+    ])
+    setSongs(prev => {
+      const merged = [...prev, ...newUploads.map(upload => upload.song)]
+      songsRef.current = merged
+      return merged
+    })
 
-    for (let i = 0; i < list.length; i++) {
-      const file = list[i]
-      const uid = newUploads[i].id
+    for (const upload of newUploads) {
       try {
-        const fd = new FormData()
-        fd.append('file', file)
-        const res = await fetch(`${API_BASE}/songs/`, {
-          method: 'POST',
-          body: fd
+        const emotion_features = await analyzeLocalAudio(upload.song.file)
+        setSongs(prev => {
+          const updated = prev.map(song => song.id === upload.id
+            ? { ...song, emotion_features, analysis_status: 'completed' }
+            : song)
+          songsRef.current = updated
+          return updated
         })
-        const uploadResult = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          throw new Error(uploadResult.detail || uploadResult.message || `Upload failed (${res.status})`)
-        }
-        setUploads(prev => prev.map(u => (
-          u.id === uid
-            ? { ...u, status: uploadResult.duplicate ? 'duplicate' : 'done' }
-            : u
-        )))
+        setUploads(prev => prev.map(item => item.id === upload.id ? { ...item, status: 'done' } : item))
       } catch (error) {
-        setUploads(prev => prev.map(u => (
-          u.id === uid
-            ? { ...u, status: 'error', error: error.message || 'Upload failed.' }
-            : u
-        )))
+        URL.revokeObjectURL(upload.song.objectUrl)
+        setSongs(prev => {
+          const updated = prev.filter(song => song.id !== upload.id)
+          songsRef.current = updated
+          return updated
+        })
+        setUploads(prev => prev.map(item => item.id === upload.id
+          ? { ...item, status: 'error', error: error.message || 'This audio could not be analyzed in your browser.' }
+          : item))
       }
     }
-    fetchSongs()
+  }
+
+  const retrySongAnalysis = async (event, song) => {
+    event.stopPropagation()
+    try {
+      const response = await fetch(`${API_BASE}/songs/${song.id}/analyze`, { method: 'POST' })
+      if (!response.ok) throw new Error('Could not queue analysis')
+      setSongs(previous => {
+        const updated = previous.map(item => item.id === song.id ? { ...item, analysis_status: 'pending' } : item)
+        songsRef.current = updated
+        return updated
+      })
+    } catch {
+      setPlayerError(`Could not restart analysis for ${song.title}.`)
+    }
   }
 
   // ---------- playback ----------
@@ -430,7 +523,7 @@ export default function Home() {
     currentSongRef.current = nextCurrentSong
 
     if (audioRef.current) {
-      audioRef.current.src = `${API_BASE}/songs/${song.id}/stream`
+      audioRef.current.src = song.isLocal ? song.objectUrl : `${API_BASE}/songs/${song.id}/stream`
       audioRef.current.load()
       // Start immediately from the click/voice event instead of waiting for a
       // React effect, which can lose the browser's user-activation window.
@@ -442,7 +535,7 @@ export default function Home() {
         setPlayerError(
           error?.name === 'NotAllowedError'
             ? 'Your browser blocked playback. Click Play once, then try Leo again.'
-            : 'Audio could not be played. Check the backend stream and audio file.'
+            : 'Audio could not be played. Try another format supported by your browser.'
         )
       })
     }
@@ -450,8 +543,10 @@ export default function Home() {
     setIsPlaying(true)
     setProgress(0)
     setCurrentTime(0)
-    recordPlay(song)
-    setHistory(getHistory())
+    if (!song.isLocal) {
+      recordPlay(song)
+      setHistory(getHistory())
+    }
   }
 
   const togglePlay = () => {
@@ -605,16 +700,17 @@ export default function Home() {
     setActiveMood(m.key)
     setMoodLoading(true)
     setMoodError(null)
+    const localMatches = songs.filter(song => song.isLocal && song.emotion_features?.[m.key] >= 0.4)
     try {
       const res = await fetch(
         `${API_BASE}/recommendations/?mood=${m.key}&limit=20`
       )
       if (!res.ok) throw new Error('Failed to load recommendations')
       const data = await res.json()
-      setMoodSongs(Array.isArray(data) ? data : [])
+      setMoodSongs([...(Array.isArray(data) ? data : []), ...localMatches])
     } catch {
-      setMoodError('Could not load songs for this mood.')
-      setMoodSongs([])
+      setMoodSongs(localMatches)
+      if (!localMatches.length) setMoodError('Could not load songs for this mood.')
     } finally {
       setMoodLoading(false)
     }
@@ -684,8 +780,21 @@ export default function Home() {
   }
 
   const scrollToSection = (key) => {
-    const el = sectionsRef.current[key]
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const container = mainContentRef.current
+    if (!container) return
+    setActiveLibrarySection(key)
+    container.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const scrollToAllSongs = () => {
+    setActiveLibrarySection('all')
+    window.requestAnimationFrame(() => {
+      const container = mainContentRef.current
+      const section = sectionRefs.current.all
+      if (!container || !section) return
+      const top = section.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop
+      container.scrollTo({ top: Math.max(0, top - 12), behavior: 'smooth' })
+    })
   }
 
   // ---------- derived sections ----------
@@ -706,11 +815,44 @@ export default function Home() {
     .map(rec => byId.get(rec.id) || rec)
     .filter(Boolean)
   const favSongs = favs.map(id => byId.get(id)).filter(Boolean)
+  const localAudioSongs = songs.filter(song => song?.isLocal)
   const sessions = previousSessions(history)
   const playlistRows = playlists.map(p => ({
   ...p,
   songs: p.song_ids.map(id => byId.get(id)).filter(Boolean)
 }))
+  const librarySections = [
+    { key: 'all', title: 'All Songs', items: allSongs.slice(0, 10), emoji: '🎵', empty: 'No songs match your search.' },
+    ...(localAudioSongs.length > 0
+      ? [{ key: 'local-audio', title: 'Local Audio · This Device Only', items: localAudioSongs, emoji: '💻', empty: 'Choose audio files to analyze them here.' }]
+      : []),
+    { key: 'recent', title: 'Recently Played', items: recentSongs, emoji: '🕘', empty: 'Nothing played yet — tap a song below to start.' },
+    { key: 'favs', title: 'Favorite Songs', items: favSongs, emoji: '❤️', empty: 'Tap the heart on any song to add it to favorites.' },
+    ...sessions.map((session, index) => ({
+      key: `session-${index}`,
+      title: `Previous Session · ${session.label}`,
+      items: session.songs,
+      emoji: '💾',
+      empty: '',
+    })),
+    ...playlistRows.map(playlist => ({
+      key: `playlist-${playlist.id}`,
+      title: playlist.name,
+      items: playlist.songs,
+      emoji: '🎧',
+      mode: 'remove',
+      playlist,
+      empty: 'Empty — tap the + on any song to add it here.',
+    })),
+  ]
+  const selectedSection = librarySections.find(section => section.key === activeLibrarySection)
+  const orderedLibrarySections = activeLibrarySection === 'all' || !selectedSection
+    ? [...librarySections]
+    : [
+        selectedSection,
+        ...librarySections.filter(section => section.key === 'all'),
+        ...librarySections.filter(section => section.key !== activeLibrarySection && section.key !== 'all'),
+      ]
 
   // ---------- render a single horizontal row ----------
   // mode: 'add' shows a + to add to a playlist; 'remove' shows a ✕ to remove from that playlist
@@ -757,7 +899,21 @@ export default function Home() {
             <div className="img-description">
               {song.artist_name || 'Unknown Artist'}
             </div>
-            <div>
+            {song.isLocal && (
+              <div className="local-audio-analysis">
+                {song.analysis_status === 'processing'
+                  ? 'Analyzing on this device…'
+                  : `Estimated mood · ${Object.entries(song.emotion_features || {}).sort((a, b) => b[1] - a[1])[0]?.[0] || 'audio profile'}`}
+              </div>
+            )}
+            {!song.isLocal && song.analysis_status && song.analysis_status !== 'completed' && (
+              <div className="local-audio-analysis">
+                {song.analysis_status === 'failed' ? (
+                  <button className="analysis-retry" onClick={event => retrySongAnalysis(event, song)}>Analysis failed · Retry</button>
+                ) : `Analysis ${song.analysis_status || 'pending'}…`}
+              </div>
+            )}
+            {!song.isLocal && <div>
               <button
                 className="card-download"
                 onClick={(e) => {
@@ -769,7 +925,7 @@ export default function Home() {
               <i className="fa-solid fa-download"></i>
             </button>
 
-            </div>
+            </div>}
           </div>
         )
       })}
@@ -778,10 +934,7 @@ export default function Home() {
 
   // ---------- render a section w/ header + arrows ----------
   const renderSection = (key, title, items, emoji, emptyHint, mode = 'add', playlist = null) => (
-    <div
-      className="music-section"
-      ref={el => { sectionsRef.current[key] = el }}
-    >
+    <div className="music-section" key={key} ref={el => { sectionRefs.current[key] = el }}>
       <div className="row-header">
         <h2>{emoji} {title} <span className="count-chip">{items.length}</span></h2>
         <div className="row-header-actions">
@@ -854,95 +1007,74 @@ export default function Home() {
       <div className="main">
         {/* LEFT SIDEBAR */}
         <div className="main-left-part">
-          <div className="library"><p>Your Library</p></div>
-          <div className="box-container">
-            <div className="box playlist-create-box">
-              <h4>🎧 Your Playlists</h4>
-              <p>{playlists.length} playlist{playlists.length === 1 ? '' : 's'}</p>
-              <button onClick={(e) => { e.stopPropagation(); setCreatingPlaylist(true) }}>+ New Playlist</button>
-              <div
-                className="nav-card"
-                onClick={() => {
-                  if (playlists.length) scrollToSection(`playlist-${playlists[0].id}`)
-                  else setCreatingPlaylist(true)
-                }}
-              >
-                {playlists.length > 0 && (
-                  <ul className="sidebar-playlist-list">
-                    {playlists.map(p => (
-                      <li key={p.id}>
-                        <span>{p.name}</span>
-                        <span className="sidebar-playlist-count">{p.song_ids.length}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {playlists.length === 0 && (
-                  <p className="nav-hint">Create one &amp; tap here to jump to it →</p>
-                )}
-              </div>
-            </div>
-            <div className="box add-songs-box">
-              <h4>📤 Add Songs</h4>
-              <p>Upload music — it's stored on the server, analyzed, and ready to play</p>
-              <button onClick={() => fileInputRef.current?.click()}>
-                Upload Music
+          <div className="library library-heading">
+            <p>Your Library</p>
+            <button className="library-add-audio" onClick={() => fileInputRef.current?.click()} title="Add audio from this device" aria-label="Add local audio">
+              <i className="fa-solid fa-plus" />
+            </button>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
+            multiple
+            className="visually-hidden-audio-input"
+            onChange={(e) => { handleFiles(e.target.files); e.target.value = '' }}
+          />
+          <div className="box-container library-list">
+            <button className={`library-nav-item ${activeLibrarySection === 'all' ? 'active' : ''}`} onClick={() => scrollToSection('all')}>
+              <span><i className="fa-solid fa-music" /> All Songs</span><small>{songs.length}</small>
+            </button>
+            {localAudioSongs.length > 0 && (
+              <button className={`library-nav-item ${activeLibrarySection === 'local-audio' ? 'active' : ''}`} onClick={() => scrollToSection('local-audio')}>
+                <span><i className="fa-solid fa-computer" /> Local Audio</span><small>{localAudioSongs.length}</small>
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg"
-                multiple
-                style={{ display: 'none' }}
-                onChange={(e) => { handleFiles(e.target.files); e.target.value = '' }}
-              />
-              {uploads.length > 0 && (
-                <ul className="upload-status-list">
-                  {uploads.map(u => (
-                    <li key={u.id} className={u.status}>
-                      <span className="upload-name" title={u.error || u.name}>
-                        {u.name}
-                        {u.status === 'duplicate' && <small>Already in your library</small>}
-                        {u.error && <small className="upload-error-message">{u.error}</small>}
-                      </span>
-                      <span className="upload-icon">
-                        {u.status === 'uploading' && <i className="fa-solid fa-spinner fa-spin"></i>}
-                        {u.status === 'done' && <i className="fa-solid fa-circle-check" style={{ color: '#4CAF50' }}></i>}
-                        {u.status === 'duplicate' && <i className="fa-solid fa-circle-info" title="Already in your library"></i>}
-                        {u.status === 'error' && <i className="fa-solid fa-circle-xmark" style={{ color: '#ff4d6d' }}></i>}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            )}
+            <button className={`library-nav-item ${activeLibrarySection === 'recent' ? 'active' : ''}`} onClick={() => scrollToSection('recent')}>
+              <span><i className="fa-solid fa-clock-rotate-left" /> Recently Played</span><small>{dedupeRecent(history).length}</small>
+            </button>
+            <button className={`library-nav-item ${activeLibrarySection === 'favs' ? 'active' : ''}`} onClick={() => scrollToSection('favs')}>
+              <span><i className="fa-solid fa-heart" /> Favorites</span><small>{favSongs.length}</small>
+            </button>
+            {sessions.length > 0 && (
+              <button className={`library-nav-item ${activeLibrarySection.startsWith('session-') ? 'active' : ''}`} onClick={() => scrollToSection('session-0')}>
+                <span><i className="fa-solid fa-clock" /> Previous Sessions</span><small>{sessions.length}</small>
+              </button>
+            )}
+            <div className="library-playlist-heading">
+              <span>Playlists</span>
+              <button onClick={() => setCreatingPlaylist(true)} title="Create playlist" aria-label="Create playlist"><i className="fa-solid fa-plus" /></button>
             </div>
-            <div className="box nav-card" onClick={() => scrollToSection('recent')}>
-              <h4>🕘 Recently Played</h4>
-              <p>{dedupeRecent(history).length} songs in your history</p>
-              <span className="nav-hint">Tap to jump →</span>
-            </div>
-            <div className="box nav-card" onClick={() => scrollToSection('favs')}>
-              <h4>❤️ Favorite Songs</h4>
-              <p>{favSongs.length} saved</p>
-              <span className="nav-hint">Tap to jump →</span>
-              <i className={`fa-solid fa-heart ${favSongs.length > 0 ? 'active' : ''}`}></i>
-            </div>
-            <div className="box nav-card" onClick={() => scrollToSection(sessions.length ? 'session-0' : 'all')}>
-              <h4>💾 Previous Sessions</h4>
-              <p>{sessions.length ? `${sessions.length} prior session${sessions.length > 1 ? 's' : ''}` : 'No prior sessions yet'}</p>
-              <span className="nav-hint">Tap to jump →</span>
-            </div>
+            {playlists.length ? playlists.map(playlist => (
+              <button key={playlist.id} className={`library-nav-item library-playlist-item ${activeLibrarySection === `playlist-${playlist.id}` ? 'active' : ''}`} onClick={() => scrollToSection(`playlist-${playlist.id}`)}>
+                <span><i className="fa-solid fa-list-music" /> {playlist.name}</span><small>{playlist.song_ids.length}</small>
+              </button>
+            )) : <p className="library-empty">No playlists yet</p>}
+            {uploads.length > 0 && (
+              <ul className="upload-status-list library-upload-status">
+                {uploads.map(upload => (
+                  <li key={upload.id} className={upload.status} title={upload.error || upload.name}>
+                    <span className="upload-name">{upload.name}</span>
+                    <span className="upload-icon">
+                      {upload.status === 'analyzing' && <i className="fa-solid fa-spinner fa-spin" />}
+                      {upload.status === 'done' && <i className="fa-solid fa-circle-check" style={{ color: '#4CAF50' }} />}
+                      {upload.status === 'error' && <i className="fa-solid fa-circle-xmark" style={{ color: '#ff4d6d' }} />}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
         {/* RIGHT MAIN CONTENT */}
-        <div className="main-right-part">
+        <div className="main-right-part" ref={mainContentRef}>
           <section className="welcome-hero">
             <div className="welcome-copy">
               <span className="eyebrow"><span className="status-dot" /> YOUR PERSONAL SOUNDTRACK</span>
               <h1>Find your <span>RiVibe.</span></h1>
               <p>Music for every mood, every moment, and everything in between.</p>
-              <button className="hero-cta" onClick={() => scrollToSection('all')}>
+              <button className="hero-cta" onClick={scrollToAllSongs}>
                 Explore your music <i className="fa-solid fa-arrow-right" />
               </button>
             </div>
@@ -1002,35 +1134,15 @@ export default function Home() {
                 </div>
               )}
 
-              {renderSection(
-                'all', 'All Songs', allSongs.slice(0, 10), '🎵',
-                'No songs match your search.'
-              )}
-
-              {renderSection(
-                'recent', 'Recently Played', recentSongs, '🕘',
-                'Nothing played yet — tap a song below to start.'
-              )}
-
-              {renderSection(
-                'favs', 'Favorite Songs', favSongs, '❤️',
-                'Tap the heart on any song to add it to favorites.'
-              )}
-
-              {sessions.map((s, i) =>
-                renderSection(
-                  `session-${i}`, `Previous Session · ${s.label}`, s.songs, '💾',
-                  ''
-                )
-              )}
-
-              {playlistRows.map(p =>
-                renderSection(
-                  `playlist-${p.id}`, p.name, p.songs, '🎧',
-                  'Empty — tap the + on any song to add it here.',
-                  'remove', p
-                )
-              )}
+              {orderedLibrarySections.map(section => renderSection(
+                section.key,
+                section.title,
+                section.items,
+                section.emoji,
+                section.empty,
+                section.mode || 'add',
+                section.playlist || null,
+              ))}
 
             </>
           )}

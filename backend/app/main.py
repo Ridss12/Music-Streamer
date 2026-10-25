@@ -65,6 +65,7 @@ async def lifespan(app: FastAPI):
 
     # Start background workers for emotion analysis
     await task_queue.start(worker_count=2)
+    await task_queue.recover_pending()
     logger.info("Emotion analysis workers started")
 
     yield

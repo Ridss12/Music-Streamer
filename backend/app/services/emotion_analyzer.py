@@ -1,5 +1,7 @@
 import numpy as np
 import logging
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Dict, Any
 
@@ -62,7 +64,15 @@ class EmotionAnalyzer:
         try:
             # Load only first 30 seconds for faster analysis
             # This is sufficient for emotion classification while keeping processing fast
-            y, sr = self.librosa.load(file_path, sr=22050, mono=True, duration=30)
+            try:
+                y, sr = self.librosa.load(file_path, sr=22050, mono=True, duration=30)
+            except Exception as decode_error:
+                logger.info(
+                    "Librosa's native decoder could not read %s (%s); trying FFmpeg",
+                    Path(file_path).name,
+                    decode_error,
+                )
+                y, sr = self._load_with_ffmpeg(file_path)
 
             # Extract features
             features = self._extract_features(y, sr)
@@ -79,6 +89,33 @@ class EmotionAnalyzer:
         except Exception as e:
             logger.error(f"Librosa analysis failed for {file_path}: {e}")
             raise
+
+    def _load_with_ffmpeg(self, file_path: str):
+        """Decode formats such as AAC/M4A to a short temporary WAV for librosa."""
+        with tempfile.TemporaryDirectory(prefix="music-analysis-") as temp_dir:
+            wav_path = Path(temp_dir) / "analysis.wav"
+            try:
+                result = subprocess.run(
+                    [
+                        "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+                        "-i", str(file_path), "-t", "30", "-vn", "-ac", "1",
+                        "-ar", "22050", "-f", "wav", str(wav_path),
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+            except FileNotFoundError as error:
+                raise RuntimeError("FFmpeg is required to analyze this audio format.") from error
+            except subprocess.TimeoutExpired as error:
+                raise RuntimeError("FFmpeg took too long to decode this audio file.") from error
+
+            if result.returncode != 0 or not wav_path.is_file():
+                detail = (result.stderr or "Unable to decode audio with FFmpeg.").strip()
+                raise RuntimeError(detail[-1000:])
+
+            return self.librosa.load(str(wav_path), sr=22050, mono=True, duration=30)
 
     def _extract_features(self, y: np.ndarray, sr: int) -> Dict[str, float]:
         """Extract comprehensive audio features using librosa"""

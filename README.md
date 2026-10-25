@@ -161,6 +161,7 @@ Music-Streaming-App/
 - `POST /import/songs` - Import songs from folder
 - `POST /songs/{id}/analyze` - Trigger/redo analysis
 - `GET /songs/stats/analysis` - View analysis progress
+- Permanent uploads through `POST /songs/` are disabled. Use **Add Local Audio** in the app to analyze and play a visitor's own files in their browser.
 
 ### Recommendations
 - `GET /recommendations/?mood=happy` - Get mood-based recommendations
@@ -199,9 +200,9 @@ The recommendation engine uses **cosine similarity** to find songs matching your
 - **Not needed if** `frontend-react/dist/index.html` exists (it's included in the zip)
 
 ### "No songs found"
-1. Make sure you put `.mp3` files in `backend/songs/`
-2. Visit http://localhost:8000/import/songs to import them
-3. Wait for analysis to complete (check status in the UI)
+1. Choose **Add Local Audio** in the app to analyze files on your device for the current session.
+2. For songs that should be part of the shared server library, place them in `backend/songs/` on the PC and import that folder using the server's import route.
+3. Wait for analysis to complete (check status in the UI).
 
 ### "Cannot play audio"
 1. Check that the backend is running (http://localhost:8000)

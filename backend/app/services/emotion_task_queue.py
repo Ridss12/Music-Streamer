@@ -30,6 +30,7 @@ class EmotionTaskQueue:
         self._worker_task = None
         self._worker_count = 1
         self._workers = []
+        self._queued_job_ids = set()
 
     async def start(self, worker_count: int = 1):
         """Start the background worker(s)"""
@@ -49,6 +50,38 @@ class EmotionTaskQueue:
             worker.cancel()
         self._workers.clear()
         logger.info("Stopped all emotion analysis workers")
+
+    async def recover_pending(self):
+        """Restore unfinished work after a backend restart."""
+        db = SessionLocal()
+        try:
+            active_jobs = db.query(AnalysisJob).filter(
+                AnalysisJob.status.in_([JobStatus.PENDING, JobStatus.PROCESSING])
+            ).all()
+            active_song_ids = set()
+            job_ids = []
+            for job in active_jobs:
+                active_song_ids.add(job.song_id)
+                if job.status == JobStatus.PROCESSING:
+                    job.status = JobStatus.PENDING
+                    job.started_at = None
+                    song = db.query(Song).filter(Song.id == job.song_id).first()
+                    if song:
+                        song.analysis_status = AnalysisStatus.PENDING
+                job_ids.append(job.id)
+
+            unqueued_songs = db.query(Song.id).filter(
+                Song.analysis_status == AnalysisStatus.PENDING
+            ).all()
+            missing_job_song_ids = [song_id for (song_id,) in unqueued_songs if song_id not in active_song_ids]
+            db.commit()
+        finally:
+            db.close()
+
+        for job_id in job_ids:
+            await self._queue_job(job_id)
+        for song_id in missing_job_song_ids:
+            await self.enqueue(song_id)
 
     async def enqueue(self, song_id: int) -> int:
         """Add a song to the analysis queue. Returns job_id."""
@@ -71,6 +104,8 @@ class EmotionTaskQueue:
 
             if existing_job:
                 logger.info(f"Song {song_id} already has pending job {existing_job.id}")
+                if existing_job.status == JobStatus.PENDING:
+                    await self._queue_job(existing_job.id)
                 return existing_job.id
 
             # Create new job
@@ -84,18 +119,24 @@ class EmotionTaskQueue:
             db.commit()
 
             # Add to queue
-            await self._queue.put(job.id)
+            await self._queue_job(job.id)
             logger.info(f"Enqueued analysis job {job.id} for song {song_id}")
 
             return job.id
         finally:
             db.close()
 
+    async def _queue_job(self, job_id: int):
+        if job_id not in self._queued_job_ids:
+            self._queued_job_ids.add(job_id)
+            await self._queue.put(job_id)
+
     async def _worker(self, worker_id: str):
         """Worker coroutine that processes jobs from the queue"""
         while self._running:
             try:
                 job_id = await asyncio.wait_for(self._queue.get(), timeout=1.0)
+                self._queued_job_ids.discard(job_id)
                 await self._process_job(job_id, worker_id)
                 self._queue.task_done()
             except asyncio.TimeoutError:
@@ -180,7 +221,7 @@ class EmotionTaskQueue:
             job.error_message = None
             db.commit()
 
-            await self._queue.put(job_id)
+            await self._queue_job(job_id)
             logger.info(f"Retried job {job_id}")
             return True
         finally:

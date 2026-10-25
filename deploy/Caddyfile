@@ -1,0 +1,30 @@
+:8080 {
+    bind 127.0.0.1
+
+    @pages_preflight {
+        method OPTIONS
+        header Origin https://music-streamer.pages.dev
+    }
+
+    handle @pages_preflight {
+        header Access-Control-Allow-Origin https://music-streamer.pages.dev
+        header Access-Control-Allow-Credentials true
+        header Access-Control-Allow-Methods "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
+        header Access-Control-Allow-Headers "Authorization, Content-Type"
+        header Access-Control-Allow-Private-Network true
+        header Access-Control-Max-Age 600
+        respond "" 204
+    }
+
+    handle_path /whisper/* {
+        reverse_proxy 127.0.0.1:8001
+    }
+
+    handle_path /rasa/* {
+        reverse_proxy 127.0.0.1:5005
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:8000
+    }
+}

@@ -1,9 +1,94 @@
-# Cloudflare Pages with services hosted on your PC
+# Cloudflare Pages with services on your PC (Tailscale)
 
-The frontend can be built and hosted by Cloudflare Pages while the FastAPI backend,
-MySQL, song files, Whisper, and Rasa continue to run on your PC. Configure Cloudflare
-Tunnel hostnames for the backend (port 8000), Whisper (port 8001), and Rasa (port
-5005). Keep MySQL private; it does not need a public hostname.
+This setup publishes the React frontend on Cloudflare Pages and keeps the API,
+MySQL, songs, Whisper, and Rasa on your PC. Tailscale Funnel provides a public
+HTTPS hostname for the web services. MySQL remains local and is never exposed.
+
+## Access model
+
+Both the Pages website and the Funnel hostname are reachable from the public
+internet. Anyone with the Funnel URL can reach the app's web services, so keep
+authentication enabled, use a strong local `JWT_SECRET_KEY`, and do not expose
+MySQL or administrative database ports. The PC must stay powered on, connected
+to the internet, and connected to Tailscale. Funnel is subject to Tailscale's
+bandwidth limits.
+
+The app's **Add Local Audio** action analyzes selected files in the visitor's
+browser and keeps them only for that page session. The frontend does not send
+those audio files to the PC. Permanent uploads through `POST /songs/` are
+disabled; the server library can still be populated directly on the PC.
+
+## Run the PC services
+
+Start MySQL, the backend on port `8000`, Whisper on `8001`, and Rasa on `5005`.
+Keep each service bound to `127.0.0.1` where its startup configuration allows.
+Do not publish port `3306`.
+
+Install Caddy and use [`deploy/Caddyfile`](deploy/Caddyfile) to route the
+browser's HTTPS requests to the local services. It listens only on
+`127.0.0.1:8080`, so the individual service ports are not exposed to your LAN.
+
+Install the project config and start Caddy:
+
+```sh
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl enable --now caddy
+```
+
+The config routes `/whisper/*` to Whisper, `/rasa/*` to Rasa, and all other
+paths to the backend. It also answers CORS private-network preflights from the
+Pages production origin, which browsers may send when routing through Funnel.
+The equivalent Caddyfile is:
+
+```caddyfile
+:8080 {
+    bind 127.0.0.1
+    @pages_preflight {
+        method OPTIONS
+        header Origin https://music-streamer.pages.dev
+    }
+    handle @pages_preflight {
+        header Access-Control-Allow-Origin https://music-streamer.pages.dev
+        header Access-Control-Allow-Credentials true
+        header Access-Control-Allow-Methods "GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS"
+        header Access-Control-Allow-Headers "Authorization, Content-Type"
+        header Access-Control-Allow-Private-Network true
+        header Access-Control-Max-Age 600
+        respond "" 204
+    }
+    handle_path /whisper/* { reverse_proxy 127.0.0.1:8001 }
+    handle_path /rasa/* { reverse_proxy 127.0.0.1:5005 }
+    handle { reverse_proxy 127.0.0.1:8000 }
+}
+```
+
+After installing and signing into Tailscale on the PC, enable MagicDNS and
+HTTPS certificates in the tailnet admin console. An Owner, Admin, or Network
+admin must enable Funnel on the tailnet's DNS page. Then expose Caddy publicly
+over HTTPS:
+
+```sh
+tailscale funnel --bg --https=443 8080
+tailscale funnel status
+```
+
+Use the HTTPS hostname shown by `tailscale funnel status`, for example
+`https://music-pc.example-tailnet.ts.net`. Keep the actual hostname in the
+Cloudflare Pages build settings; it is not a secret. Funnel publishes the
+service to the internet, even for visitors who do not use Tailscale.
+
+## Start the project on demand
+
+The backend, Whisper, Rasa, Caddy, MariaDB, and Funnel can be controlled with
+`bash music-streamer.sh start`, `bash music-streamer.sh stop`, and
+`bash music-streamer.sh status`. The start command installs the systemd unit
+files without enabling app services at boot. It also disables boot startup for
+Docker, Caddy, and MariaDB; Tailscale itself remains enabled so the PC stays on
+your tailnet. Stop the current terminal-launched backend and Whisper processes
+before using the script for the first time.
+
+The units use `/home/ved/Projects/Music-Streamer`; edit their paths and `User=`
+if the repository lives elsewhere.
 
 ## Cloudflare Pages build settings
 
@@ -11,34 +96,34 @@ Tunnel hostnames for the backend (port 8000), Whisper (port 8001), and Rasa (por
 - Build command: `npm run build`
 - Build output directory: `dist`
 
-Add these build environment variables in Pages settings. Replace the example URLs
-with the HTTPS hostnames assigned in your Cloudflare Tunnel:
+Set these Pages build environment variables, replacing the hostname with the
+one reported by Tailscale:
 
 ```text
-VITE_API_BASE_URL=https://api.example.com
-VITE_WHISPER_BASE_URL=https://whisper.example.com
-VITE_RASA_BASE_URL=https://rasa.example.com
+VITE_API_BASE_URL=https://music-pc.example-tailnet.ts.net
+VITE_WHISPER_BASE_URL=https://music-pc.example-tailnet.ts.net/whisper
+VITE_RASA_BASE_URL=https://music-pc.example-tailnet.ts.net/rasa
 ```
 
-The frontend uses localhost service URLs automatically when opened on localhost.
-For a hosted HTTPS frontend, configure all three variables; it does not fall back
-to the visitor's own localhost.
+The frontend appends `/transcribe` to the Whisper URL and
+`/webhooks/rest/webhook` to the Rasa URL. Do not put database credentials,
+`JWT_SECRET_KEY`, or any other secret in a `VITE_*` variable; these values are
+embedded in the public frontend build.
 
-## Browser CORS origins
+## Browser origins
 
-Set `CORS_ORIGINS` for the backend and Whisper processes to a comma-separated list
-of the exact Cloudflare Pages origins that should be allowed, for example:
+Set `CORS_ORIGINS` in the backend and Whisper local environment files to the
+exact Cloudflare Pages origin(s) users will visit, comma separated. For example:
 
 ```text
 CORS_ORIGINS=https://your-site.pages.dev,https://music.example.com
 ```
 
-For Rasa, pass the same allowed origin(s) to its `--cors` option when starting it.
-The Rasa action server is only called by Rasa, so it can remain on the PC without a
-public tunnel hostname.
+Start Rasa with the same origin(s) in its `--cors` option. The Rasa action
+server is called by Rasa and does not need a public or tailnet hostname.
 
-## Local secrets and storage
+## Local data and secrets
 
-Keep MySQL credentials, `JWT_SECRET_KEY`, music files, and database storage on the
-PC. Do not add secrets to the `VITE_*` variables: values prefixed with `VITE_` are
-embedded in the public frontend bundle.
+Keep MySQL, music files, database credentials, and `JWT_SECRET_KEY` on the PC.
+Use `backend/.env.example` as a template for a local `backend/.env` and never
+commit the filled-in file. Back up the MySQL data directory and song library.

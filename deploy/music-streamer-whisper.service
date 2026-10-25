@@ -1,0 +1,18 @@
+[Unit]
+Description=Music Streamer Whisper transcription service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ved
+WorkingDirectory=/home/ved/Projects/Music-Streamer/whisper-service
+Environment=HOME=/home/ved
+Environment=CORS_ORIGINS=https://music-streamer.pages.dev
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/ved/Projects/Music-Streamer/whisper-service/venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8001
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

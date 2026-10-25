@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import hashlib
 import os
-import uuid
-import aiofiles
 from pathlib import Path, PureWindowsPath
 import re
 import unicodedata
@@ -184,90 +182,12 @@ MIME_TYPES = {
 # =========================================================
 
 @router.post("/", response_model=dict)
-async def upload_song(
-    file: UploadFile = File(...),
-    title: Optional[str] = None,
-    artist_name: Optional[str] = None,
-    album_name: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    """Upload a song and queue it for emotion analysis."""
-
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="Choose an audio file to upload.")
-
-    safe_original_name = Path(file.filename.replace("\\", "/")).name
-    file_ext = Path(safe_original_name).suffix.lower()
-
-    if file_ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"File type {file_ext} not allowed. "
-                f"Allowed: {ALLOWED_EXTENSIONS}"
-            )
-        )
-
-    os.makedirs(AUDIO_STORAGE_PATH, exist_ok=True)
-    safe_original_name = f"{Path(safe_original_name).stem[:160]}{file_ext}"
-    file_name = f"{uuid.uuid4().hex}_{safe_original_name}"
-
-    file_path = os.path.join(
-        AUDIO_STORAGE_PATH,
-        file_name
+async def upload_song():
+    """Reject permanent uploads; user-selected audio is analyzed in-browser."""
+    raise HTTPException(
+        status_code=410,
+        detail="Permanent song uploads are disabled. Add audio from the app to analyze it on your device.",
     )
-
-    file_size = 0
-    upload_hasher = hashlib.sha256()
-    async with aiofiles.open(file_path, "wb") as f:
-        while chunk := await file.read(1024 * 1024):
-            await f.write(chunk)
-            file_size += len(chunk)
-            upload_hasher.update(chunk)
-
-    if file_size == 0:
-        os.remove(file_path)
-        raise HTTPException(status_code=400, detail="The selected audio file is empty.")
-
-    upload_digest = upload_hasher.hexdigest()
-    for existing_song in db.query(Song).all():
-        if existing_song.file_size is not None and existing_song.file_size != file_size:
-            continue
-        existing_path = _available_audio_path(existing_song)
-        if existing_path and _audio_digest(existing_path) == upload_digest:
-            os.remove(file_path)
-            return {
-                "id": existing_song.id,
-                "title": existing_song.title,
-                "status": "duplicate",
-                "duplicate": True,
-                "message": "This audio file is already in your library."
-            }
-
-    song = Song(
-        title=title or Path(safe_original_name).stem,
-        artist_name=artist_name,
-        album_name=album_name,
-        file_path=file_path,
-        file_name=file_name,
-        file_format=file_ext,
-        file_size=file_size,
-        analysis_status=AnalysisStatus.PENDING
-    )
-
-    db.add(song)
-    db.commit()
-    db.refresh(song)
-
-    job_id = await task_queue.enqueue(song.id)
-
-    return {
-        "id": song.id,
-        "title": song.title,
-        "status": "uploaded",
-        "analysis_job_id": job_id,
-        "message": "Song uploaded and queued for emotion analysis"
-    }
 
 
 # =========================================================

@@ -12,6 +12,10 @@
 # Node.js
 **/node_modules/
 **/dist/
+.wrangler/
+
+# User-managed audio library (kept on the host PC)
+/backend/songs/
 
 # Environment secrets
 .env
