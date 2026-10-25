@@ -5,12 +5,36 @@ export default function LeoAssistant() {
   const streamRef = useRef(null)
   const recorderRef = useRef(null)
   const listeningRef = useRef(false)
+  const startingRef = useRef(false)
+  const startTokenRef = useRef(0)
   const processingRef = useRef(false)
   const speakingRef = useRef(false)
   const discardRecordingRef = useRef(false)
   const speechTokenRef = useRef(0)
+  const awaitingCommandRef = useRef(false)
+  const wakeTimeoutRef = useRef(null)
+
+  const setCommandListening = (active) => {
+    awaitingCommandRef.current = active
+    document.body.classList.toggle('leo-command-listening', active)
+    window.dispatchEvent(new CustomEvent('leo-listening-state', { detail: { active } }))
+    if (wakeTimeoutRef.current) {
+      clearTimeout(wakeTimeoutRef.current)
+      wakeTimeoutRef.current = null
+    }
+    if (active) {
+      console.info('Leo is listening for your command')
+      wakeTimeoutRef.current = setTimeout(() => {
+        setCommandListening(false)
+        console.info('Leo command window closed')
+      }, 30000)
+    }
+  }
 
   const stopLeo = () => {
+    setCommandListening(false)
+    startTokenRef.current += 1
+    startingRef.current = false
     listeningRef.current = false
     speakingRef.current = false
     discardRecordingRef.current = false
@@ -29,6 +53,16 @@ export default function LeoAssistant() {
     }
   }
 
+  const fetchWithTimeout = async (url, options, timeoutMs) => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      return await fetch(url, { ...options, signal: controller.signal })
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
   const processAudio = async (blob) => {
     if (processingRef.current) return
 
@@ -41,11 +75,10 @@ export default function LeoAssistant() {
       if (!WHISPER_TRANSCRIBE_URL) {
         throw new Error('Set VITE_WHISPER_BASE_URL to enable voice transcription on this site.')
       }
-      const whisperResponse = await fetch(WHISPER_TRANSCRIBE_URL, {
+      const whisperResponse = await fetchWithTimeout(WHISPER_TRANSCRIBE_URL, {
           method: 'POST',
           body: formData
-        }
-      )
+        }, 30000)
 
       if (!whisperResponse.ok) throw new Error('Whisper failed')
 
@@ -54,16 +87,26 @@ export default function LeoAssistant() {
 
       if (!text) return
 
+      // Whisper can invent repeated command words when a recording is quiet.
+      // Never pass those low quality chunks to Rasa.
+      const words = text.toLowerCase().match(/[a-z0-9']+/g) || []
+      const repeatedWordCount = words.reduce((count, word, index) =>
+        count + (index > 0 && word === words[index - 1] ? 1 : 0), 0)
+      if (words.length > 12 || repeatedWordCount >= 3) {
+        console.debug('Leo ignored a noisy transcription')
+        return
+      }
+
       console.log('Leo heard:', text, `(source language: ${whisperData.language || 'unknown'})`)
 
       // Whisper is configured to translate supported languages to English,
       // which gives the existing Rasa model one consistent input language.
       // Keep the detected source language for diagnostics and future replies.
-      const wakeWord = text.match(/\b(?:hey\s*,?\s*(?:leo|leah|neo|yo)|heyho|hello\s*,?\s*leo)\b/i)
+      const wakeWord = text.match(/\b(?:(?:hey|hail|he'll|hell|hill|here|a)\s*,?\s*(?:leo|leah|neo|yo|you)|heyho|hello\s*,?\s*leo)\b/i)
 
       let command = (wakeWord
         ? text.slice(wakeWord.index + wakeWord[0].length)
-        : text)
+        : (awaitingCommandRef.current ? text : ''))
         .replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, '')
         .trim()
 
@@ -72,19 +115,23 @@ export default function LeoAssistant() {
         .replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, '')
         .trim()
 
-      if (!command) {
+      if (wakeWord) setCommandListening(true)
+
+      if (wakeWord && !command) {
         speak('Yes, I am listening.')
         return
       }
 
-      const directCommand = /\b(?:play|put on|start|listen to|i want|give me|can i hear|pause|resume|continue|stop|next|skip|previous|go back|volume|louder|quieter|mute|unmute|shuffle|repeat|playlist|search|find|show lyrics)\b/i.test(command)
+      // The wake phrase opens a short command window. Ignore all other speech
+      // while idle, then accept the next utterance in any translated language.
+      if (!wakeWord && !awaitingCommandRef.current) return
+      if (!command) return
 
       // Leo listens continuously, but should only send commands after its wake
-      // phrase or when the user says a supported command directly. This keeps
-      // ordinary speech and Leo's own spoken reply out of the Rasa conversation.
-      if (!wakeWord && !directCommand) return
-
+      // phrase. Wake-word commands can arrive in translated or transliterated
+      // wording, so pass the next utterance to Rasa as-is.
       console.log('Leo command:', command)
+      setCommandListening(false)
 
       if (!RASA_REST_URL) {
         throw new Error('Set VITE_RASA_BASE_URL to enable voice commands on this site.')
@@ -94,11 +141,11 @@ export default function LeoAssistant() {
       // NLU can classify and execute each action independently.
       const commands = command.split(/\s+(?:and then|then|and)\s+(?=(?:please\s+)?(?:play|put on|start|pause|resume|continue|stop|next|skip|previous|go back|increase|decrease|set|turn|raise|lower|mute|unmute|shuffle|repeat|create|delete|search|find|show)\b)/i).map(part => part.trim()).filter(Boolean)
       for (const part of commands) {
-        const rasaResponse = await fetch(RASA_REST_URL, {
+        const rasaResponse = await fetchWithTimeout(RASA_REST_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sender: 'leo-user', message: part })
-        })
+        }, 15000)
 
         if (!rasaResponse.ok) throw new Error(`Rasa request failed (${rasaResponse.status})`)
 
@@ -149,7 +196,9 @@ export default function LeoAssistant() {
   }
 
   const startLeo = async () => {
-    if (listeningRef.current) return
+    if (listeningRef.current || startingRef.current) return
+    startingRef.current = true
+    const startToken = ++startTokenRef.current
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -160,8 +209,16 @@ export default function LeoAssistant() {
         }
       })
 
+      // React development mode can mount, clean up, and mount the component
+      // again while the browser permission prompt is still pending.
+      if (startToken !== startTokenRef.current) {
+        stream.getTracks().forEach(track => track.stop())
+        return
+      }
+
       streamRef.current = stream
       listeningRef.current = true
+      startingRef.current = false
 
       const listen = () => {
         if (!listeningRef.current) return
@@ -217,14 +274,17 @@ export default function LeoAssistant() {
           if (recorder.state === 'recording') {
             recorder.stop()
           }
-        }, 4000)
+        }, awaitingCommandRef.current ? 4000 : 6000)
       }
 
       console.log('Leo microphone started')
       listen()
     } catch (error) {
+      if (startToken !== startTokenRef.current) return
       console.error('Leo microphone error:', error)
       localStorage.setItem('leoVoiceAssistantEnabled', 'false')
+    } finally {
+      if (startToken === startTokenRef.current) startingRef.current = false
     }
   }
 

@@ -18,9 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-print("Loading Whisper model...")
-model = whisper.load_model("base")
-print("Whisper model loaded!")
+model_name = os.getenv("WHISPER_MODEL", "small")
+print(f"Loading Whisper {model_name} model...")
+model = whisper.load_model(model_name)
+print(f"Whisper {model_name} model loaded!")
 
 
 @app.get("/")
@@ -48,12 +49,17 @@ async def transcribe(file: UploadFile = File(...)):
             # so the existing Rasa intent model can understand the command.
             task="translate",
             temperature=0.0,
-            initial_prompt=(
-                "Music player commands: play, pause, resume, stop, next, "
-                "previous, volume, mute, shuffle, repeat, and playlists. "
-                "Preserve song titles and artist names."
-            ),
+            # Short rolling microphone chunks often contain silence. Avoid a
+            # music-command prompt, which Whisper may echo as a hallucination.
+            condition_on_previous_text=False,
+            no_speech_threshold=0.6,
+            logprob_threshold=-1.0,
+            compression_ratio_threshold=2.4,
         )
+
+        segments = result.get("segments", [])
+        if segments and all(segment.get("no_speech_prob", 0) >= 0.6 for segment in segments):
+            return {"text": "", "language": result.get("language"), "translated": True}
 
         return {
             "text": result["text"].strip(),

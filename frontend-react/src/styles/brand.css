@@ -19,6 +19,30 @@ body {
   font-family: Inter, "Montserrat", system-ui, sans-serif;
 }
 
+body.leo-command-listening::after {
+  content: "";
+  position: fixed;
+  inset: 8px;
+  z-index: 10000;
+  pointer-events: none;
+  border: 2px solid rgba(63, 169, 255, 0.82);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 18px rgba(44, 143, 255, 0.14),
+    0 0 16px rgba(44, 143, 255, 0.52),
+    0 0 40px rgba(100, 79, 255, 0.28);
+  animation: leo-listening-glow 1.7s ease-in-out infinite alternate;
+}
+
+@keyframes leo-listening-glow {
+  from { opacity: 0.58; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.leo-command-listening::after { animation: none; }
+}
+
 body.auth-body {
   min-height: 100vh;
   color: var(--rv-white);

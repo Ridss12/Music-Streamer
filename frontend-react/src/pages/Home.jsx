@@ -195,6 +195,7 @@ export default function Home() {
   const [playerError, setPlayerError] = useState('')
 
   const audioRef = useRef(null)
+  const leoListeningRef = useRef(false)
   const songsRef = useRef([])
   const currentSongRef = useRef({ title: '', artist: '', id: null })
   const repeatRef = useRef(false)
@@ -281,7 +282,20 @@ export default function Home() {
   useEffect(() => { repeatRef.current = isRepeat }, [isRepeat])
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume / 100
+    if (audioRef.current) {
+      audioRef.current.volume = (volume / 100) * (leoListeningRef.current ? 0.18 : 1)
+    }
+  }, [volume])
+
+  useEffect(() => {
+    const onLeoListeningState = (event) => {
+      leoListeningRef.current = Boolean(event.detail?.active)
+      if (audioRef.current) {
+        audioRef.current.volume = (volume / 100) * (leoListeningRef.current ? 0.18 : 1)
+      }
+    }
+    window.addEventListener('leo-listening-state', onLeoListeningState)
+    return () => window.removeEventListener('leo-listening-state', onLeoListeningState)
   }, [volume])
 
   useEffect(() => {
