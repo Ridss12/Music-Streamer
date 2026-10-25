@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { RASA_REST_URL, WHISPER_TRANSCRIBE_URL } from './serviceUrls'
+import { WHISPER_TRANSCRIBE_URL } from './serviceUrls'
 
 export default function LeoAssistant() {
   const streamRef = useRef(null)
@@ -9,6 +9,7 @@ export default function LeoAssistant() {
   const speakingRef = useRef(false)
   const discardRecordingRef = useRef(false)
   const speechTokenRef = useRef(0)
+  const wakeWordUntilRef = useRef(0)
 
   const stopLeo = () => {
     listeningRef.current = false
@@ -56,16 +57,14 @@ export default function LeoAssistant() {
 
       console.log('Leo heard:', text)
 
-      // Whisper sometimes transcribes “Hey Leo” as “Heyho” or “Hey yo”.
-      // Leo is already explicitly enabled by the user, so also accept a
-      // direct supported command when the wake phrase is missed entirely.
-      const wakeWord = text.match(/\b(?:hey\s*,?\s*(?:leo|leah|neo|yo)|heyho|hello\s*,?\s*leo)\b/i)
-
-      let command = (wakeWord
-        ? text.slice(wakeWord.index + wakeWord[0].length)
-        : text)
-        .replace(/^[\s,.:;!?-]+|[\s,.:;!?-]+$/g, '')
-        .trim()
+      const wakeWord = text.match(/\bhey\s*,?\s*leo\b/i)
+      let command = text
+      if (wakeWord) {
+        wakeWordUntilRef.current = Date.now() + 10_000
+        command = text.slice(wakeWord.index + wakeWord[0].length)
+      } else if (Date.now() > wakeWordUntilRef.current) {
+        return
+      }
 
       command = command
         .replace(/^(yeah|yes|okay|ok)[,\s]*/i, '')
@@ -73,115 +72,39 @@ export default function LeoAssistant() {
         .trim()
 
       if (!command) {
-        speak('Yes, I am listening.')
+        speak('Yes?')
         return
       }
 
-      const directCommand = /^(?:(?:please|can you|could you)\s+)?(?:play(?:\s+.+)?|put on\s+.+|start\s+.+|pause(?:\s+music)?|resume(?:\s+music)?|continue(?:\s+playing)?|stop(?:\s+music)?|(?:next|skip)(?:\s+(?:song|track|this song))?|(?:previous|go back)(?:\s+(?:song|track))?|mute(?:\s+music)?|unmute(?:\s+music)?|shuffle(?:\s+(?:music|playlist))?|repeat(?:\s+(?:music|song|this song))?|(?:create|make)\s+(?:a\s+)?playlist\b.+|delete\s+(?:my\s+)?playlist\b.+)$/i.test(command)
+      const normalized = command.toLowerCase().replace(/[.!?,;:]+$/g, '').trim()
+      const playMatch = normalized.match(/^play\s+(?:(?:the\s+)?(?:song|track)\s+)?(.+)$/i)
+      let action
 
-      // Leo listens continuously, but should only send commands after its wake
-      // phrase or when the user says a supported command directly. This keeps
-      // ordinary speech and Leo's own spoken reply out of the Rasa conversation.
-      if (!wakeWord && !directCommand) return
-
-      console.log('Leo command:', command)
-
-      const lowerCommand = command.toLowerCase().replace(/[.!?,;:]+$/g, '').trim()
-      const localCommandHandled =
-        /^(play|put on|start)\s+/i.test(command) ||
-        /^(pause|pause music|resume|resume music|stop|stop music|next|skip(\s+(song|track))?|play (the )?next song|previous|previous song|previous track|play (the )?previous song|go back|mute|mute music|unmute|unmute music|shuffle|shuffle music|shuffle playlist|repeat|repeat song|repeat this song)$/.test(lowerCommand)
-
-      if (/^(next|skip)(\s+(song|track))?$/.test(lowerCommand) || /^(play )?(the )?next song$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'next' } }))
-      } else if (/^(previous|previous song|previous track|play (the )?previous song|go back)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'previous' } }))
-      } else if (/^(play|put on|start)\s+/i.test(command)) {
-        const requestedSong = command
-          .replace(/^(play|put on|start)\s+/i, '')
-          .replace(/^(the\s+song|song|me)\s+/i, '')
-          .replace(/^['"“”]+|['"“”]+$/g, '')
-          .trim()
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: {
-              action: 'play',
-              song: requestedSong
-            }
-          })
-        )
-      } else if (
-        lowerCommand === 'pause' ||
-        lowerCommand === 'pause music'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'pause' }
-          })
-        )
-      } else if (
-        lowerCommand === 'resume' ||
-        lowerCommand === 'resume music'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'resume' }
-          })
-        )
-      } else if (
-        lowerCommand === 'stop' ||
-        lowerCommand === 'stop music'
-      ) {
-        window.dispatchEvent(
-          new CustomEvent('leo-command', {
-            detail: { action: 'stop' }
-          })
-        )
-      } else if (/^(mute|mute music)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'mute' } }))
-      } else if (/^(unmute|unmute music)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'unmute' } }))
-      } else if (/^(shuffle|shuffle music|shuffle playlist)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'shuffle' } }))
-      } else if (/^(repeat|repeat song|repeat this song)$/.test(lowerCommand)) {
-        window.dispatchEvent(new CustomEvent('leo-command', { detail: { action: 'repeat' } }))
+      if (playMatch) {
+        const requestedSong = playMatch[1].replace(/^['"“”]|['"“”]$/g, '').trim()
+        if (requestedSong) action = { action: 'play', song: requestedSong }
+      } else if (/^pause(?:\s+(?:the\s+)?(?:song|music|track))?$/.test(normalized)) {
+        action = { action: 'pause' }
+      } else if (/^(?:volume\s+up|increase\s+(?:the\s+)?volume|turn\s+(?:the\s+)?volume\s+up)$/.test(normalized)) {
+        action = { action: 'volume_delta', value: 10 }
+      } else if (/^(?:volume\s+down|decrease\s+(?:the\s+)?volume|turn\s+(?:the\s+)?volume\s+down)$/.test(normalized)) {
+        action = { action: 'volume_delta', value: -10 }
+      } else if (/^mute(?:\s+music)?$/.test(normalized)) {
+        action = { action: 'mute' }
+      } else if (/^unmute(?:\s+music)?$/.test(normalized)) {
+        action = { action: 'unmute' }
+      } else if (/^(?:skip|next)(?:\s+(?:the\s+)?(?:song|track))?$/.test(normalized)) {
+        action = { action: 'next' }
+      } else if (/^(?:prev|previous)(?:\s+(?:the\s+)?(?:song|track))?$/.test(normalized)) {
+        action = { action: 'previous' }
       }
 
-      // Start the player action immediately. Rasa is only used for a spoken
-      // reply, so an unavailable or slow Rasa server must not block playback.
-      void (async () => {
-        try {
-          if (!RASA_REST_URL) {
-            throw new Error('Set VITE_RASA_BASE_URL to enable voice commands on this site.')
-          }
-          const rasaResponse = await fetch(RASA_REST_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ sender: 'leo-user', message: command })
-            }
-          )
-
-          if (rasaResponse.ok) {
-            const rasaData = await rasaResponse.json()
-            if (!localCommandHandled) {
-              const rasaCommand = rasaData
-                .map(item => item.custom?.leo_command || item.leo_command)
-                .find(Boolean)
-              if (rasaCommand?.action) {
-                window.dispatchEvent(
-                  new CustomEvent('leo-command', { detail: rasaCommand })
-                )
-              }
-            }
-            const responseText = rasaData
-              .map(item => item.text || '')
-              .filter(Boolean)
-              .join(' ')
-            if (responseText) speak(responseText)
-          }
-        } catch (error) {
-          console.warn('Leo conversational service unavailable:', error)
-        }
-      })()
+      if (action) {
+        console.log('Leo command:', action.action, action.song || '')
+        window.dispatchEvent(new CustomEvent('leo-command', { detail: action }))
+      } else if (wakeWord) {
+        speak('Try play a song, pause, volume up or down, mute, skip, or previous song.')
+      }
     } catch (error) {
       console.error('Leo error:', error)
     } finally {

@@ -12,9 +12,7 @@ case "${1:-}" in
       /etc/systemd/system/
     sudo systemctl daemon-reload
     sudo systemctl disable caddy mariadb docker >/dev/null
-    sudo docker update --restart=no music-actions music-rasa >/dev/null
     sudo systemctl start tailscaled docker mariadb
-    sudo docker start music-actions music-rasa
     sudo systemctl start music-streamer-backend music-streamer-whisper caddy
     if ! sudo systemctl is-active --quiet music-streamer-funnel; then
       sudo tailscale funnel --https=443 off >/dev/null 2>&1 || true
@@ -33,7 +31,6 @@ case "${1:-}" in
     sudo systemctl --no-pager --full status \
       music-streamer-backend music-streamer-whisper \
       music-streamer-funnel caddy mariadb docker
-    sudo docker ps --filter name=music-rasa --filter name=music-actions
     sudo tailscale funnel status
     ;;
   *)

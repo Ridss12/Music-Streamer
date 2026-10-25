@@ -1,7 +1,7 @@
 # Cloudflare Pages with services on your PC (Tailscale)
 
 This setup publishes the React frontend on Cloudflare Pages and keeps the API,
-MySQL, songs, Whisper, and Rasa on your PC. Tailscale Funnel provides a public
+MySQL, songs, and Whisper on your PC. Tailscale Funnel provides a public
 HTTPS hostname for the web services. MySQL remains local and is never exposed.
 
 ## Access model
@@ -20,7 +20,7 @@ disabled; the server library can still be populated directly on the PC.
 
 ## Run the PC services
 
-Start MySQL, the backend on port `8000`, Whisper on `8001`, and Rasa on `5005`.
+Start MySQL, the backend on port `8000`, and Whisper on `8001`.
 Keep each service bound to `127.0.0.1` where its startup configuration allows.
 Do not publish port `3306`.
 
@@ -35,8 +35,8 @@ sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
 sudo systemctl enable --now caddy
 ```
 
-The config routes `/whisper/*` to Whisper, `/rasa/*` to Rasa, and all other
-paths to the backend. It also answers CORS private-network preflights from the
+The config routes `/whisper/*` to Whisper and all other paths to the backend.
+It also answers CORS private-network preflights from the
 Pages production origin, which browsers may send when routing through Funnel.
 The equivalent Caddyfile is:
 
@@ -57,7 +57,6 @@ The equivalent Caddyfile is:
         respond "" 204
     }
     handle_path /whisper/* { reverse_proxy 127.0.0.1:8001 }
-    handle_path /rasa/* { reverse_proxy 127.0.0.1:5005 }
     handle { reverse_proxy 127.0.0.1:8000 }
 }
 ```
@@ -79,7 +78,7 @@ service to the internet, even for visitors who do not use Tailscale.
 
 ## Start the project on demand
 
-The backend, Whisper, Rasa, Caddy, MariaDB, and Funnel can be controlled with
+The backend, Whisper, Caddy, MariaDB, and Funnel can be controlled with
 `bash music-streamer.sh start`, `bash music-streamer.sh stop`, and
 `bash music-streamer.sh status`. The start command installs the systemd unit
 files without enabling app services at boot. It also disables boot startup for
@@ -102,13 +101,13 @@ one reported by Tailscale:
 ```text
 VITE_API_BASE_URL=https://music-pc.example-tailnet.ts.net
 VITE_WHISPER_BASE_URL=https://music-pc.example-tailnet.ts.net/whisper
-VITE_RASA_BASE_URL=https://music-pc.example-tailnet.ts.net/rasa
 ```
 
-The frontend appends `/transcribe` to the Whisper URL and
-`/webhooks/rest/webhook` to the Rasa URL. Do not put database credentials,
-`JWT_SECRET_KEY`, or any other secret in a `VITE_*` variable; these values are
-embedded in the public frontend build.
+The frontend appends `/transcribe` to the Whisper URL. Leo uses explicit
+commands such as “Hey Leo, play [song title],” “pause song,” “volume up,”
+“volume down,” “mute,” “skip song,” and “previous song.” It does not require
+Rasa. Do not put database credentials, `JWT_SECRET_KEY`, or any other secret
+in a `VITE_*` variable; these values are embedded in the public frontend build.
 
 ## Browser origins
 
@@ -118,9 +117,6 @@ exact Cloudflare Pages origin(s) users will visit, comma separated. For example:
 ```text
 CORS_ORIGINS=https://your-site.pages.dev,https://music.example.com
 ```
-
-Start Rasa with the same origin(s) in its `--cors` option. The Rasa action
-server is called by Rasa and does not need a public or tailnet hostname.
 
 ## Local data and secrets
 

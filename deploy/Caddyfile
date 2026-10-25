@@ -20,10 +20,6 @@
         reverse_proxy 127.0.0.1:8001
     }
 
-    handle_path /rasa/* {
-        reverse_proxy 127.0.0.1:5005
-    }
-
     handle {
         reverse_proxy 127.0.0.1:8000
     }
